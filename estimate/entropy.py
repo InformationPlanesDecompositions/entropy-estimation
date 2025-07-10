@@ -1,6 +1,6 @@
 import numpy as np
 
-def estimate_entropy(samples: np.ndarray) -> float:
+def compute_plug_in_estimate(samples: np.ndarray) -> float:
     entropy = 0
 
     for _, count in zip(*np.unique_counts(samples)):
