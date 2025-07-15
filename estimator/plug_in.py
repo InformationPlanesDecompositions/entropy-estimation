@@ -12,6 +12,26 @@ def estimate_entropy(samples: np.ndarray) -> float:
     return -1 * entropy
 
 
+# TODO:
+#   - Move to dedicated sub-package/file?
+#   - Add original Miller correction?
+def compute_miller_madow_correction(
+    samples: np.ndarray,
+    n_classes: int | None = None
+) -> float:
+    """
+    Compute the Miller-Madow bias correction of the plug-in estimator, as defined
+    in "The Statistical Estimation of Entropy in the Non-Parametric Case" (Harris, 1975).
+    Only the first-order correction, i.e. without the necessity of knowing p_i
+
+    Applied as E{H^hat} = H - MMC
+    """
+    if n_classes is None:
+        n_classes = len(np.unique(samples)) - 1
+
+    return n_classes / (2 * len(samples))
+
+
 def estimate_entropy_variance(
     samples: np.ndarray,
     entropy_hat: float | None = None
