@@ -46,7 +46,7 @@ def main():
                 # TODO: Extract into method
                 h_hat = plug_in.estimate_entropy(samples)
                 var_hat = plug_in.estimate_entropy_variance(samples, h_hat)
-                corr = plug_in.compute_miller_madow_correction(samples, n_classes=n_trials)
+                corr = plug_in.compute_miller_madow_correction(samples)
 
                 # TODO: Extract into method
                 print(
