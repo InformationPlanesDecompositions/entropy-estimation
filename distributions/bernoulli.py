@@ -1,5 +1,7 @@
 import numpy as np
 
+import math
+
 from distributions import binomial
 
 
@@ -12,5 +14,8 @@ def compute_true_entropy(p: float) -> float:
         raise ValueError(f'Invalid success probability provided, was {p:3f}')
 
     q = 1 - p
+
+    if math.isclose(p, 0) or math.isclose(p, 1):
+        return 0
 
     return -(p * np.log2(p) + q * np.log2(q))
