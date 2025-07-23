@@ -41,7 +41,7 @@ def main():
                 samples = distributions.binomial.generate_samples(
                     p,
                     n_trials=n_trials,
-                    n_samples=n_samples
+                    size=n_samples
                 )
 
                 # TODO: Extract into method

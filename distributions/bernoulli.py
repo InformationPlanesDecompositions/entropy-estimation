@@ -5,8 +5,8 @@ import math
 from distributions import binomial
 
 
-def generate_samples(p: float, n_samples: int) -> np.ndarray:
-    return binomial.generate_samples(p, n_samples, n_trials=1)
+def generate_samples(p: float, size: int | tuple[int, ...]) -> np.ndarray:
+    return binomial.generate_samples(p, size, n_trials=1)
 
 
 def compute_true_entropy(p: float) -> float:
