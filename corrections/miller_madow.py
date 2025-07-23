@@ -1,3 +1,10 @@
+"""
+Compute the Miller-Madow bias correction of the plug-in estimator, as defined in "The Statistical
+Estimation of Entropy in the Non-Parametric Case" (Harris, 1975) and "Note on the bias of
+information estimates" (Miller, 1955).
+
+Applied as H^MM = H^hat + MM
+"""
 import numpy as np
 
 

@@ -1,6 +1,7 @@
 import numpy as np
 
 from estimators import plug_in
+from corrections import mm
 
 import distributions.bernoulli
 import distributions.binomial
@@ -46,7 +47,7 @@ def main():
                 # TODO: Extract into method
                 h_hat = plug_in.estimate_entropy(samples)
                 var_hat = plug_in.estimate_entropy_variance(samples, h_hat)
-                corr = plug_in.compute_miller_madow_correction(samples)
+                corr = mm.first_order(samples)
 
                 # TODO: Extract into method
                 print(
@@ -63,7 +64,7 @@ def main():
                 # TODO: Extract into method
                 h_hat = plug_in.estimate_entropy(samples)
                 var_hat = plug_in.estimate_entropy_variance(samples, h_hat)
-                corr = plug_in.compute_miller_madow_correction(samples, n_classes=2)
+                corr = mm.first_order(samples, n_classes=2)
 
                 # TODO: Extract into method
                 print(
