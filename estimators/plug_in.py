@@ -27,9 +27,9 @@ def compute_miller_madow_correction(
     Applied as E{H^hat} = H - MMC
     """
     if n_classes is None:
-        n_classes = len(np.unique(samples)) - 1
+        n_classes = len(np.unique(samples))
 
-    return n_classes / (2 * len(samples))
+    return (n_classes - 1) / (2 * len(samples))
 
 
 def estimate_entropy_variance(
@@ -48,6 +48,7 @@ def estimate_entropy_variance(
     return variance / len(samples)
 
 
+# TODO: Remove/extract into dedicated method in sub-package
 def compute_entropy_confidence_interval(
     samples: np.ndarray,
     confidence: float = 0.95,
