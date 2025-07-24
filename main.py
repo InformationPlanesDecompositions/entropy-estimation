@@ -56,7 +56,7 @@ def main():
                 )
 
         if args.distribution == 'bernoulli':
-            h_true = distributions.bernoulli.compute_true_entropy(p)
+            h_true = distributions.bernoulli.compute_entropy(p)
 
             for n_samples in sample_sizes:
                 samples = distributions.bernoulli.generate_samples(p, n_samples)

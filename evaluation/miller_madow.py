@@ -18,7 +18,7 @@ def evaluate(n_experiments: int, p: float, n_samples_space: np.ndarray):
 
     data = defaultdict(list)
 
-    h_true = distributions.bernoulli.compute_true_entropy(p)
+    h_true = distributions.bernoulli.compute_entropy(p)
 
     for n_samples in n_samples_space:
         experiments = distributions.bernoulli.generate_samples(p, size=(n_experiments, n_samples))

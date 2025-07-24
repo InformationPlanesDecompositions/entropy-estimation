@@ -9,7 +9,7 @@ def generate_samples(p: float, size: int | tuple[int, ...]) -> np.ndarray:
     return binomial.generate_samples(p, size, n_trials=1)
 
 
-def compute_true_entropy(p: float) -> float:
+def compute_entropy(p: float) -> float:
     if p < 0 or p > 1:
         raise ValueError(f'Invalid success probability provided, was {p:3f}')
 
