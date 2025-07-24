@@ -2,15 +2,16 @@ import numpy as np
 
 
 def estimate_entropy(samples: np.ndarray) -> float:
-    entropy = 0
+    _, c = np.unique(samples, axis=0, return_counts=True)
 
-    for _, count in zip(*np.unique_counts(samples)):
-        p = count / len(samples)
-        entropy += p * np.log2(p)
-    
-    return -1 * entropy
+    p = c / samples.shape[0]
+
+    p = p[p != 0]
+
+    return -np.sum(p * np.log2(p))
 
 
+# TODO: Adjust to multidimensional RV/joint entropy?
 def estimate_entropy_variance(
     samples: np.ndarray,
     entropy_hat: float | None = None
