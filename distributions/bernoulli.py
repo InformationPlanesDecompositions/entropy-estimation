@@ -19,3 +19,13 @@ def compute_entropy(p: float) -> float:
         return 0
 
     return -(p * np.log2(p) + q * np.log2(q))
+
+
+def compute_joint_entropy(p: float, d: int) -> float:
+    if p < 0 or p > 1:
+        raise ValueError(f'Invalid success probability provided, was {p:3f}')
+    
+    if d <= 0:
+        raise ValueError(f'Invalid Bernoulli RV dimension provided, was {d}')
+    
+    return d * compute_entropy(p)
