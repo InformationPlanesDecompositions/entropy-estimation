@@ -109,7 +109,7 @@ def multidimensional_bernoulli(
     
     # sns.scatterplot(data=df_data, x='N', y='H^_1', ax=ax, marker='x', s=25)
 
-    ax.set(yscale='log')
+    ax.set_yscale('log', base=2)
 
     fig.tight_layout()
     plt.show()
