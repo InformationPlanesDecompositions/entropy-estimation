@@ -21,60 +21,44 @@ def build_evaluation_parsers(
     if eval_parser is None:
         eval_parser = argparse.ArgumentParser()
 
-    eval_subparsers = eval_parser.add_subparsers(dest='distribution', required=True)
+    eval_subparsers = eval_parser.add_subparsers(dest='evaluation_type', required=True)
 
-    eval_parent_parser = argparse.ArgumentParser(add_help=False)
-    eval_parent_parser.add_argument(
+    # ====================
+    # Plug-In Estimate evaluation
+    # ====================
+    plugin_subparser = eval_subparsers.add_parser(
+        'plug-in'
+    )
+
+    plugin_subparser.add_argument(
+        '-M', '--n-experiments',
+        type=int,
+        help='Number of experiments to conduct',
+        required=True,
+    )
+    plugin_subparser.add_argument(
         '-p', '--success-prob',
         type=float,
         help='Success probability per trial',
         required=True,
     )
-    eval_parent_parser.add_argument(
-        '--n-experiments',
+    plugin_subparser.add_argument(
+        '-D', '--dimensions',
         type=int,
-        help='Number of experiments',
+        nargs=3,
+        help='The dimensions of the Bernoulli RV vector. If none is provided, assume 1D. Otherwise,'
+        + ' use arguments as (start, stop, n_steps)',
+        metavar=('START', 'STOP', 'N_STEPS'),
+        required=False,
+    )
+    plugin_subparser.add_argument(
+        '-N', '--n_samples',
+        type=int,
+        nargs='+',
+        help='The number of samples per experiment. If -D is provided, the first integer will be'
+        + ' used for all experiments. Otherwise, use arguments as (start, stop, n_steps)',
+        metavar=('N'),
         required=True,
-    )
-    eval_parent_parser.add_argument(
-        '--spacing-method',
-        choices=['linear', 'logarithmic'],
-        help='How to space the varying number of trials',
-        required=True
-    )
-    eval_parent_parser.add_argument(
-        '--n-min',
-        type=int,
-        help='Minimum number of trials',
-        required=True
-    )
-    eval_parent_parser.add_argument(
-        '--n-max',
-        type=int,
-        help='Maximum number of trials',
-        required=True
-    )
-
-    # ====================
-    # Binomial
-    # ====================
-    binomial_parser = eval_subparsers.add_parser(
-        'binomial',
-        parents=[eval_parent_parser]
-    )
-    binomial_parser.add_argument(
-        '-s', '--n-samples',
-        type=int,
-        help='Number of samples per trial',
-        required=True
-    )
-
-    # ====================
-    # Bernoulli
-    # ====================
-    eval_subparsers.add_parser(
-        'bernoulli',
-        parents=[eval_parent_parser],
     )
 
     return eval_parser
