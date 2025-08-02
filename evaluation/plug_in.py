@@ -87,27 +87,29 @@ def multidimensional_bernoulli(
         experiments = bernoulli.generate_samples(p, size=(n_experiments, n_samples, d))
 
         estimates = [
-            (plug_in.estimate_entropy(samples), mm.first_order(samples))
+            (plug_in.estimate_entropy(samples), plug_in.estimate_entropy_variance(samples), mm.first_order(samples))
             for samples in experiments
         ]
 
-        for h_hat, mm_first in estimates:
+        for h_hat, var_hat, mm_first in estimates:
             data['D'].append(d)
             data['H_true'].append(h_true)
             data['H^'].append(h_hat)
+            data['Var^'].append(var_hat)
             data['MM1'].append(mm_first)
             data['H^1'].append(h_hat + mm_first)
             # data['MM2'].append(mm_second)
             # data['H^2'].append(h_hat + mm_second)
 
-    df_data = pd.DataFrame(data=data, columns=['D', 'H_true', 'H^', 'MM1', 'H^1'])
+    df_data = pd.DataFrame(data=data)
 
     fig, ax = plt.subplots()
 
-    sns.lineplot(data=df_data, x='D', y='H^1', ax=ax, errorbar=('sd', 2), label=r'$\hat{H}_\text{MM}$')
+    sns.lineplot(data=df_data, x='D', y='H^1', ax=ax, errorbar=None, label=r'$\hat{H}_\text{MM}$')
+    sns.lineplot(x=df_data['D'], y=df_data['H^1'] + np.sqrt(df_data['Var^']), ax=ax, c='g', ls=':', errorbar=None, label=None)
+    sns.lineplot(x=df_data['D'], y=df_data['H^1'] - np.sqrt(df_data['Var^']), ax=ax, c='g', ls=':', errorbar=None, label=None)
     sns.lineplot(data=df_data, x='D', y='H_true', ax=ax, label=r'$H_\text{true}$', c='r', ls='--', errorbar=None)
-    
-    # sns.scatterplot(data=df_data, x='N', y='H^_1', ax=ax, marker='x', s=25)
+    sns.scatterplot(data=df_data, x='D', y='H^1', ax=ax, marker='x', s=25)
 
     ax.set_yscale('log', base=2)
 
