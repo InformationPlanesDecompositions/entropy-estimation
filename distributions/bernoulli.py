@@ -9,6 +9,10 @@ def generate_samples(p: float, size: int | tuple[int, ...]) -> np.ndarray:
     return binomial.generate_samples(p, size, n_trials=1)
 
 
+def compute_joint_probabilities(p: float, d: int) -> np.ndarray:
+    return np.array([math.comb(d, k) * p ** k * (1 - p) ** (d - k) for k in range(d + 1)])
+
+
 def compute_entropy(p: float) -> float:
     if p < 0 or p > 1:
         raise ValueError(f'Invalid success probability provided, was {p:3f}')
