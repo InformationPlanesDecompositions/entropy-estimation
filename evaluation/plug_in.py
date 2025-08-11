@@ -86,10 +86,7 @@ def multidimensional_bernoulli(
         
         experiments = bernoulli.generate_samples(p, size=(n_experiments, n_samples, d))
 
-        estimates = [
-            (plug_in.estimate_entropy(samples), plug_in.estimate_entropy_variance(samples), mm.first_order(samples))
-            for samples in experiments
-        ]
+        estimates = _compute_estimates(experiments)
 
         for h_hat, var_hat, mm_first in estimates:
             data['D'].append(d)
@@ -102,16 +99,54 @@ def multidimensional_bernoulli(
             # data['H^2'].append(h_hat + mm_second)
 
     df_data = pd.DataFrame(data=data)
+    # TODO: If MM2 implemented, adjust this to work for both estimates
+    df_entropy_interval = _compute_errorbar_per_dimension(df_data)
 
     fig, ax = plt.subplots()
 
-    sns.lineplot(data=df_data, x='D', y='H^1', ax=ax, errorbar=None, label=r'$\hat{H}_\text{MM}$')
-    sns.lineplot(x=df_data['D'], y=df_data['H^1'] + np.sqrt(df_data['Var^']), ax=ax, c='g', ls=':', errorbar=None, label=None)
-    sns.lineplot(x=df_data['D'], y=df_data['H^1'] - np.sqrt(df_data['Var^']), ax=ax, c='g', ls=':', errorbar=None, label=None)
-    sns.lineplot(data=df_data, x='D', y='H_true', ax=ax, label=r'$H_\text{true}$', c='r', ls='--', errorbar=None)
-    sns.scatterplot(data=df_data, x='D', y='H^1', ax=ax, marker='x', s=25)
+    sns.lineplot(data=df_data, x='D', y='H^1', c='tab:blue', ax=ax, errorbar=None, label=r'$\hat{H}_\text{MM}$')
+    sns.scatterplot(data=df_data, x='D', y='H^1', c='tab:blue', ax=ax, marker='x', s=25)
 
+    ax.fill_between(
+        x=df_entropy_interval['D'],
+        y1=df_entropy_interval['H^1_lower'],
+        y2=df_entropy_interval['H^1_upper'],
+        alpha=0.25,
+        color='tab:blue'
+    )
+
+    sns.lineplot(data=df_data, x='D', y='H_true', ax=ax, label=r'$H_\text{true}$', c='tab:red', ls='--', errorbar=None)
+
+    ax.set_xlabel(r'RV vector size $D$')
+
+    ax.set_ylabel(r'Entropy $H$')
     ax.set_yscale('log', base=2)
 
     fig.tight_layout()
-    plt.show()
+    plt.show(block=True)
+
+
+def _compute_estimates(experiments: np.ndarray) -> list[tuple[float, float, float]]:
+    data = list()
+
+    for samples in experiments:
+        entropy = plug_in.estimate_entropy(samples)
+        entropy_variance = plug_in.estimate_entropy_variance(samples, entropy_hat=entropy)
+        mm_first = mm.first_order(samples)
+
+        data.append((entropy, entropy_variance, mm_first))
+
+    return data
+
+
+def _compute_errorbar_per_dimension(df_data: pd.DataFrame) -> pd.DataFrame:
+    variances = df_data[['D', 'Var^']].groupby(by='D').mean().values.flatten()
+    entropy = df_data[['D', 'H^1']].groupby(by='D').mean().values.flatten()
+
+    df_interval = pd.DataFrame(data={
+        'D': df_data['D'].unique(),
+        'H^1_lower': entropy - np.sqrt(variances),
+        'H^1_upper': entropy + np.sqrt(variances),
+    })
+
+    return df_interval
