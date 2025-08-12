@@ -104,6 +104,8 @@ def multidimensional_bernoulli(
 
     fig, ax = plt.subplots()
 
+    ax.set_title(rf'Bernoulli Entropy Estimation ($p={p}$, $M$={n_experiments}, $N$={n_samples})')
+
     sns.lineplot(data=df_data, x='D', y='H^1', c='tab:blue', ax=ax, errorbar=None, label=r'$\hat{H}_\text{MM}$')
     sns.scatterplot(data=df_data, x='D', y='H^1', c='tab:blue', ax=ax, marker='x', s=25)
 
@@ -120,7 +122,9 @@ def multidimensional_bernoulli(
     ax.set_xlabel(r'RV vector size $D$')
 
     ax.set_ylabel(r'Entropy $H$')
-    ax.set_yscale('log', base=2)
+    # ax.set_yscale('log', base=2)
+
+    ax.grid(True)
 
     fig.tight_layout()
     plt.show(block=True)
