@@ -1,3 +1,6 @@
+import os
+from os import path
+
 import seaborn as sns
 import matplotlib.pyplot as plt
 
@@ -61,6 +64,8 @@ def multidimensional_bernoulli(
     d_steps: np.ndarray | list | None = None,
     d_range: tuple[int, int] | None = None,
     d_n_steps: int = 10,
+    save: bool = True,
+    output_dir: str = '',
 ) -> None:
     if d_steps is None:
         if d_range is None:
@@ -102,10 +107,16 @@ def multidimensional_bernoulli(
     # TODO: If MM2 implemented, adjust this to work for both estimates
     df_entropy_interval = _compute_errorbar_per_dimension(df_data)
 
+    file_prefix = path.join(path.basename(output_dir), f'EE_Bernoulli_p{p}_M{n_experiments}_N{n_samples}')
+
+    if save:
+        os.makedirs(path.basename(output_dir), exist_ok=True)
+
     fig, ax = plt.subplots()
 
     ax.set_title(rf'Bernoulli Entropy Estimation ($p={p}$, $M$={n_experiments}, $N$={n_samples})')
 
+    sns.lineplot(data=df_data, x='D', y='H^', c='tab:green', ls=':', ax=ax, errorbar=None, label=r'$\hat{H}$')
     sns.lineplot(data=df_data, x='D', y='H^1', c='tab:blue', ax=ax, errorbar=None, label=r'$\hat{H}_\text{MM}$')
     sns.scatterplot(data=df_data, x='D', y='H^1', c='tab:blue', ax=ax, marker='x', s=25)
 
@@ -127,6 +138,44 @@ def multidimensional_bernoulli(
     ax.grid(True)
 
     fig.tight_layout()
+
+    if save:
+        plt.savefig(f'{file_prefix}_Estimates.png')
+
+    plt.show(block=False)
+
+    fig, ax = plt.subplots()
+
+    ax.set_title(rf'Absolute Error w.r.t. $H_\text{{true}}$ ($p={p}$, $M$={n_experiments}, $N$={n_samples})')
+
+    sns.lineplot(x=df_data['D'], y=(df_data['H_true'] - df_data['H^']).abs(), ax=ax, label=r'$\hat{H}$')
+    sns.lineplot(x=df_data['D'], y=(df_data['H_true'] - df_data['H^1']).abs(), ax=ax, label=r'$\hat{H}_\text{MM}$')
+
+    ax.set_xlabel(r'RV vector size $D$')
+    ax.set_ylabel(r'$|e|$')
+    ax.set_yscale('log', base=2)
+
+    ax.grid(True)
+
+    fig.tight_layout()
+
+    if save:
+        plt.savefig(f'{file_prefix}_AbsErrors.png')
+
+    fig, ax = plt.subplots()
+
+    ax.set_title(rf'Miller-Madow Correction ($p={p}$, $M$={n_experiments}, $N$={n_samples})')
+
+    sns.lineplot(data=df_data, x='D', y='MM1', ax=ax, errorbar=None, label=r'$1^\text{st}$ order')
+    
+    ax.set_xlabel(r'RV vector size $D$')
+    ax.set_ylabel(r'Correction')
+
+    ax.grid(True)
+
+    if save:
+        plt.savefig(f'{file_prefix}_MMCorrection.png')
+
     plt.show(block=True)
 
 

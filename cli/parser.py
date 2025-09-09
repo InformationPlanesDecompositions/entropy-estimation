@@ -60,5 +60,18 @@ def build_evaluation_parsers(
         metavar=('N'),
         required=True,
     )
+    plugin_subparser.add_argument(
+        '-s', '--save',
+        type=bool,
+        action=argparse.BooleanOptionalAction,
+        help='Save the generated plots',
+        default=True,
+    )
+    plugin_subparser.add_argument(
+        '-o', '--output',
+        type=str,
+        help='Target directory for generated output',
+        default='./output',
+    )
 
     return eval_parser

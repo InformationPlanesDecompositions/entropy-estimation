@@ -32,7 +32,11 @@ def main():
             n_samples = n_sample_steps[0]
             d_steps = np.linspace(*dimensions)
 
-            evaluation.plug_in.multidimensional_bernoulli(n_experiments, p, n_samples, d_steps=d_steps)
+            evaluation.plug_in.multidimensional_bernoulli(
+                n_experiments, p, n_samples,
+                d_steps=d_steps,
+                save=args.save, output_dir=args.output
+            )
 
 
 if __name__ == '__main__':
