@@ -12,6 +12,11 @@ def build_parser() -> argparse.ArgumentParser:
     eval_parser = subparsers.add_parser('evaluate')
     build_evaluation_parsers(eval_parser)
 
+    # ====================
+    # Mutual Information Estimation
+    # ====================
+    mi_parser = subparsers.add_parser('mi', aliases=['mutual-information'])
+
     return root_parser
 
 
