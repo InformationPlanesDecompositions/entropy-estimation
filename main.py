@@ -1,10 +1,11 @@
+import os
+from os import path
+
 from collections import defaultdict, Counter
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.colors
-
-import time
 
 import argparse
 
@@ -13,6 +14,8 @@ import numpy as np
 import h5py
 
 import scipy.special
+
+from tqdm import tqdm
 
 import cli.parser
 
@@ -90,8 +93,24 @@ def _probability_counting(latent: np.ndarray, target: np.ndarray):
 
 
 def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Namespace):
-    activation_file = h5py.File('../ma-bnn-training/output/szt-8000/activations.h5', 'r')
-    data_file = h5py.File('../ma-bnn-training/output/szt-8000/data.h5', 'r')
+    data_dir = args.data
+
+    if not path.isdir(data_dir):
+        parser.error(f'Please provide an existing directory, did not find {data_dir}')
+
+    activation_path = path.join(data_dir, 'activations.h5')
+    data_path = path.join(data_dir, 'data.h5')
+
+    dir_name = path.basename(path.dirname(activation_path))
+
+    if not path.isfile(activation_path):
+        parser.error(f'No <activations.h5> found in given directory')
+
+    if not path.isfile(data_path):
+        parser.error(f'No <data.h5> found in given directory')
+
+    activation_file = h5py.File(activation_path, 'r')
+    data_file = h5py.File(data_path, 'r')
 
     x_shape = data_file['data/X'].attrs.get('shape', (1,))
     n = x_shape[0]
@@ -106,13 +125,11 @@ def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Names
 
     data = defaultdict(list)
 
-    now = time.time()
-
-    for _, epoch_data in activation_file.items():
+    for epoch_data in tqdm(activation_file.values(), ncols=100, ascii=True):
         epoch_data: h5py.Group
         epoch_idx = epoch_data.attrs['epoch_idx']
         
-        for _, layer_data in epoch_data.items():
+        for layer_data in epoch_data.values():
             layer_idx = layer_data.attrs['layer_idx']
             is_layer_packed = layer_data.attrs['is_packed']
 
@@ -164,10 +181,7 @@ def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Names
 
             data['MI_y'].append(mi_y)
 
-    print(f'Done after {time.time() - now}...')
-
     df_data = pd.DataFrame.from_dict(data, orient='columns')
-    df_data.to_csv('./data-8000.csv', sep=';', decimal=',')
 
     fig, ax = plt.subplots()
 
@@ -175,7 +189,7 @@ def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Names
     cmap = plt.cm.ScalarMappable(norm=norm, cmap='flare_r')
     cmap.set_array([])
 
-    sct_ax = sns.scatterplot(data=df_data, x='MI_x', y='MI_y', hue='Epoch', style='Layer', ax=ax, palette='flare_r')
+    sct_ax = sns.scatterplot(data=df_data, x='MI_x', y='MI_y', hue='Epoch', style='Layer', ax=ax, palette='flare_r', alpha=0.75)
     ax.set_xlabel(r'$I(X;T_\ell)$')
     ax.set_ylabel(r'$I(T_\ell;Y)$')
 
@@ -192,12 +206,11 @@ def main():
 
     match args.command:
         case 'evaluate':
-            _perform_evaluation(parser, args)
+            if args.eval_target == 'toy':
+                _perform_evaluation(parser, args)
         case 'mi' | 'mutual-information':
             _perform_mi_estimation(parser, args)
 
 
 if __name__ == '__main__':
     main()
-
-    pass

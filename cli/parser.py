@@ -7,15 +7,45 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = root_parser.add_subparsers(dest='command', required=True)
 
     # ====================
-    # Evaluation
+    # Entropy Evaluation
     # ====================
     eval_parser = subparsers.add_parser('evaluate')
-    build_evaluation_parsers(eval_parser)
+    eval_parser_group = eval_parser.add_subparsers(dest='eval_target', required=True)
+
+    # --------------------
+    # Toy Examples
+    # --------------------
+    ee_toy_parser = eval_parser_group.add_parser('toy', description='Evaluate the entropy estimator on toy examples')
+    build_evaluation_parsers(ee_toy_parser)
+
+    # ====================
+    # Entropy Evaluation on Trained Models
+    # ====================
+    ee_model_parser = eval_parser_group.add_parser('model', description='Evaluate the entropy estimator on activations from a model')
+    ee_model_parser.add_argument(
+        '-d', '--data',
+        type=str,
+        help='Path to the data directory',
+        required=True,
+    )
 
     # ====================
     # Mutual Information Estimation
     # ====================
     mi_parser = subparsers.add_parser('mi', aliases=['mutual-information'])
+    mi_parser.add_argument(
+        '-d', '--data',
+        type=str,
+        help='Path to the data directory',
+        required=True,
+    )
+    mi_parser.add_argument(
+        '-s', '--save',
+        type=bool,
+        action=argparse.BooleanOptionalAction,
+        help='Save the generated plots',
+        default=True,
+    )
 
     return root_parser
 
