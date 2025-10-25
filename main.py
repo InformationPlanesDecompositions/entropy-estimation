@@ -120,7 +120,7 @@ def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Names
     target: np.ndarray = y_reduced.flatten().astype(np.int64)
 
     # TODO: Beautify, obviously
-    u, c = np.unique(y[:, 0], return_counts=True, axis=0)
+    u, c = np.unique(y[:, 1], return_counts=True, axis=0)
     p_y = {_u: _c / n for _u, _c in zip(u, c)}
 
     data = defaultdict(list)
