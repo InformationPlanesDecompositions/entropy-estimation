@@ -63,39 +63,24 @@ def generate_information_plane(
             if not is_layer_packed:
                 t = t.reshape(-1, *layer_data.attrs['shape'])
 
-                sm = scipy.special.softmax(t, axis=-1)
-                sm_mean = np.mean(sm, axis=0)
+                mi_x, mi_y = _estimate_output_layer_mi(t, target)
 
-                h_yhat = -sum(sm_mean * np.log2(sm_mean))
-                h_yhat_given_x = np.mean(-np.sum(sm * np.log2(sm), axis=1))
-
-                h_yhat_given_y = 0
-
-                for cls in range(2):
-                    p_bar = np.mean(sm[target == cls], axis=0)
-                    h_cls = -np.sum(p_bar * np.log2(p_bar))
-
-                    h_yhat_given_y += (target == cls).mean() * h_cls
-
-                data['MI_x'].append(h_yhat - h_yhat_given_x)
-                data['MI_y'].append(h_yhat - h_yhat_given_y)
+                data['MI_x'].append(mi_x)
+                data['MI_y'].append(mi_y)
 
                 continue
 
             t = np.unpackbits(t)
             t = t.reshape(-1, *layer_data.attrs['shape'])
 
-            if t.shape[1] < 64:
-                t_int = _bit_array_to_integer(t)
-                p_joint = plug_in.fast_joint_probabilitiy_estimation(t_int, target)
-                p_latent = np.bincount(t_int) / n
-            else:
-                # p_joint, p_latent = _probability_counting(t, target)
-
-                # mi_x = -np.sum(p * np.log2(p) for p in p_latent.values())  # type: ignore
+            if t.shape[1] >= 64:
                 raise ValueError(f'Activations for layer {layer_idx} have too high dimension, was {t.shape[1]}, only support up to 63 bits')
+                
+            # TODO: Move to estimators/plug_in.py
+            t_int = _bit_array_to_integer(t)
+            p_joint = plug_in.fast_joint_probabilitiy_estimation(t_int, target)
+            p_latent = np.bincount(t_int) / n
 
-            # Only applicable for SZT!! ==> replace with call to plug_in.estimate?
             mi_x = -np.sum(p_latent * np.log2(p_latent + 1e-12), where=~np.isclose(p_latent, 0))
 
             data['MI_x'].append(mi_x)
@@ -131,6 +116,26 @@ def generate_information_plane(
 
     plt.show(block=True)
 
+
+def _estimate_output_layer_mi(latent: np.ndarray, target: np.ndarray) -> tuple[np.floating, ...]:
+    sm = scipy.special.softmax(latent, axis=-1)
+    sm_mean = np.mean(sm, axis=0)
+
+    h_yhat = -sum(sm_mean * np.log2(sm_mean))
+    h_yhat_given_x = np.mean(-np.sum(sm * np.log2(sm), axis=1))
+
+    h_yhat_given_y = 0.0
+
+    for cls in range(latent.shape[1]):
+        p_bar = np.mean(sm[target == cls], axis=0)
+        h_cls: np.floating = -np.sum(p_bar * np.log2(p_bar))
+
+        h_yhat_given_y += np.mean(target == cls) * h_cls
+
+    mi_x: np.floating = h_yhat - h_yhat_given_x
+    mi_y: np.floating = h_yhat - h_yhat_given_y  # type: ignore
+
+    return mi_x, mi_y
 
 def _bit_array_to_integer(arr: np.ndarray) -> np.ndarray:
     if np.any(np.logical_or(arr < 0, arr > 1)):
