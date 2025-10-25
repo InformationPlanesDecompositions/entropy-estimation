@@ -1,11 +1,10 @@
 import os
 from os import path
 
-from collections import defaultdict, Counter
+from collections import defaultdict
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-import matplotlib.colors
 
 import argparse
 
@@ -13,14 +12,14 @@ import numpy as np
 
 import h5py
 
-import scipy.special
-
 from tqdm import tqdm
 
 import cli.parser
 
 import evaluation
 import evaluation.plug_in
+
+from mi import information_plane
 
 
 def _perform_evaluation(parser: argparse.ArgumentParser, args: argparse.Namespace):
@@ -51,47 +50,6 @@ def _perform_evaluation(parser: argparse.ArgumentParser, args: argparse.Namespac
         )
 
 
-def _fast_probability_estimation(latent: np.ndarray, target: np.ndarray):
-    n, *dim = latent.shape
-
-    if len(dim) > 1:
-        raise NotImplementedError(
-            f'Probability estimation not implemented for multi-dim latent variables'
-        )
-    
-    dim = dim[0]
-
-    if dim >= 64:
-        raise ValueError(
-            f'Dimension of latent variable above limit of 64! (was {dim}). Fast'
-            + 'probability counting is not supported.'
-        )
-    
-    latent_as_integer = latent.dot(1 << np.arange(dim - 1, -1, -1))
-
-    joint_count = Counter(zip(latent_as_integer, target))
-    p_joint = {t: count / n for t, count in joint_count.items()}
-    p_latent = np.bincount(latent_as_integer) / n
-
-    return p_joint, p_latent
-
-
-def _probability_counting(latent: np.ndarray, target: np.ndarray):
-    n = len(latent)
-
-    joint_count = defaultdict(int)
-    latent_count = defaultdict(int)
-
-    for t, y in zip(latent, target):
-        joint_count[(tuple(t), y)] += 1
-        latent_count[tuple(t)] += 1
-
-    p_joint = {k: count / n for k, count in joint_count.items()}
-    p_latent = {t: v / n for t, v in latent_count.items()}
-
-    return p_joint, p_latent
-
-
 def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Namespace):
     data_dir = args.data
 
@@ -112,101 +70,20 @@ def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Names
     activation_file = h5py.File(activation_path, 'r')
     data_file = h5py.File(data_path, 'r')
 
-    x_shape = data_file['data/X'].attrs.get('shape', (1,))
-    n = x_shape[0]
-
-    y = np.reshape(data_file['data/Y'], (-1, 2)) # type: ignore
-    y_reduced = y[:, 1].reshape(-1, 1)
-    target: np.ndarray = y_reduced.flatten().astype(np.int64)
-
-    # TODO: Beautify, obviously
-    u, c = np.unique(y[:, 1], return_counts=True, axis=0)
-    p_y = {_u: _c / n for _u, _c in zip(u, c)}
-
-    data = defaultdict(list)
-
-    for epoch_data in tqdm(activation_file.values(), ncols=100, ascii=True):
-        epoch_data: h5py.Group
-        epoch_idx = epoch_data.attrs['epoch_idx']
-        
-        for layer_data in epoch_data.values():
-            layer_idx = layer_data.attrs['layer_idx']
-            is_layer_packed = layer_data.attrs['is_packed']
-
-            data['Epoch'].append(epoch_idx)
-            data['Layer'].append(layer_idx)
-
-            t = layer_data[:]
-
-            if not is_layer_packed:
-                t = t.reshape(-1, *layer_data.attrs['shape'])
-
-                sm = scipy.special.softmax(t, axis=-1)
-                sm_mean = np.mean(sm, axis=0)
-
-                h_yhat = -sum(sm_mean * np.log2(sm_mean))
-                h_yhat_given_x = np.mean(-np.sum(sm * np.log2(sm), axis=1))
-
-                h_yhat_given_y = 0
-
-                for cls in range(2):
-                    p_bar = np.mean(sm[target == cls], axis=0)
-                    h_cls = -np.sum(p_bar * np.log2(p_bar))
-
-                    h_yhat_given_y += (target == cls).mean() * h_cls
-
-                data['MI_x'].append(h_yhat - h_yhat_given_x)
-                data['MI_y'].append(h_yhat - h_yhat_given_y)
-                continue
-
-            t = np.unpackbits(t)
-            t = t.reshape(-1, *layer_data.attrs['shape'])
-
-            if t.shape[1] < 64:
-                p_joint, p_latent = _fast_probability_estimation(t, target)
-
-                mi_x = -np.sum(p_latent * np.log2(p_latent + 1e-12), where=~np.isclose(p_latent, 0))
-            else:
-                p_joint, p_latent = _probability_counting(t, target)
-
-                mi_x = -np.sum(p * np.log2(p) for p in p_latent.values())  # type: ignore
-
-            # Only applicable for SZT!! ==> replace with call to plug_in.estimate?
-            data['MI_x'].append(mi_x)
-
-            mi_y = 0
-
-            for (latent, label), p_ty in p_joint.items():
-                mi_y += p_ty * np.log2(p_ty / (p_latent[latent] * p_y[label]))
-
-            data['MI_y'].append(mi_y)
-
-    df_data = pd.DataFrame.from_dict(data, orient='columns')
-
-    fig, ax = plt.subplots()
-
-    norm = matplotlib.colors.Normalize(df_data['Epoch'].min(), df_data['Epoch'].max())
-    cmap = plt.cm.ScalarMappable(norm=norm, cmap='flare_r')
-    cmap.set_array([])
-
-    sct_ax = sns.scatterplot(data=df_data, x='MI_x', y='MI_y', hue='Epoch', style='Layer', ax=ax, palette='flare_r', alpha=0.75)
-    ax.set_xlabel(r'$I(X;T_\ell)$')
-    ax.set_ylabel(r'$I(T_\ell;Y)$')
-
-    ax.get_legend().remove()
-    ax.figure.colorbar(cmap, ax=sct_ax)
-
-    fig.tight_layout()
+    output_dir = f'./output/mi/{dir_name}'
 
     if args.save:
-        output_dir = f'./output/mi/{dir_name}'
-
         os.makedirs(output_dir, exist_ok=True)
-        plt.savefig(path.join(output_dir, 'information_plane.png'))
 
-    plt.show(block=True)
-    
+    information_plane.generate_information_plane(
+        activation_file,
+        data_file,
+        save=args.save,
+        output_dir=output_dir
+    )
 
+
+# TODO: Move to package evaluation, either into plug_in.py or model.py
 def _compare_entropy(parser: argparse.ArgumentParser, args: argparse.Namespace):
     data_dir = args.data
 
@@ -218,9 +95,6 @@ def _compare_entropy(parser: argparse.ArgumentParser, args: argparse.Namespace):
     if not (path.exists(activation_path) and path.isfile(activation_path)):
         parser.error(f'No <activations.h5> found in given directory')
 
-    # dir_name = path.basename(path.dirname(activation_path))
-
-    # activation_file = h5py.File('../ma-bnn-training/output/szt-8000/activations.h5', 'r')
     activation_file = h5py.File(activation_path, 'r')
 
     data = defaultdict(list)

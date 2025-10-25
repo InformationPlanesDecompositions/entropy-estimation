@@ -1,3 +1,5 @@
+from collections import Counter
+
 import numpy as np
 
 
@@ -36,6 +38,17 @@ def estimate_entropy_variance(
     variance -= entropy_hat ** 2
 
     return variance / samples.shape[0]
+
+
+def fast_joint_probabilitiy_estimation(x: np.ndarray, y: np.ndarray):
+    n = x.shape[0]
+
+    if len(x.shape) > 1 or len(y.shape) > 1:
+        raise ValueError(f'Only supported for arrays of shape (N,)')
+
+    joint_count = Counter(zip(x, y))
+
+    return {xy: count / n for xy, count in joint_count.items()}
 
 
 def _compute_observed_rates(samples: np.ndarray) -> np.ndarray:
