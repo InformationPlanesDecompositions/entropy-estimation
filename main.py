@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import argparse
 
 import numpy as np
+import pandas as pd
 
 import h5py
 
@@ -73,17 +74,50 @@ def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Names
     output_dir = f'./output/mi/{dir_name}'
 
     if args.save:
-        os.makedirs(output_dir, exist_ok=True)
+            os.makedirs(output_dir, exist_ok=True)
 
-    information_plane.generate_information_plane(
-        activation_file,
-        data_file,
-        save=args.save,
-        output_dir=output_dir
-    )
+    if not activation_file.attrs['has_top_group']:
+        df_data = information_plane.generate_information_plane(
+            activation_file,
+            data_file,
+            save=args.save,
+            output_dir=output_dir
+        )
+
+        df_data.set_index('Epoch', drop=True, inplace=True)
+        df_data.to_csv(path.join(output_dir, 'mi_data.csv'), sep=';', decimal=',')
+
+        return
+    
+    mode = None
+
+    for run_key, run_data in activation_file.items():
+        if mode is None:
+            mode = 'w'
+        else:
+            mode = 'a'
+
+        df_data = information_plane.generate_information_plane(
+            run_data,
+            data_file,
+            save=args.save,
+            output_dir=output_dir,
+            postfix=f'_{run_key}'
+        )
+
+        df_data.set_index('Epoch', drop=True, inplace=True)
+        df_data['Run'] = run_data.attrs['group_idx']
+        df_data.to_csv(
+            path.join(output_dir, 'mi_data.csv'),
+            sep=';',
+            decimal=',',
+            mode=mode,
+            header=mode == 'w'
+        )
 
 
 # TODO: Move to package evaluation, either into plug_in.py or model.py
+# TODO: Might not work if activation file is grouped into runs
 def _compare_entropy(parser: argparse.ArgumentParser, args: argparse.Namespace):
     data_dir = args.data
 

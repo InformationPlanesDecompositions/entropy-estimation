@@ -16,10 +16,11 @@ from estimators import plug_in
 
 # TODO: Make this work for MNIST/other variants
 def generate_information_plane(
-    activation_file: h5py.File,
+    activation_data: h5py.File | h5py.Group,
     data_file: h5py.File,
     save: bool = False,
     output_dir: str = '',
+    postfix: str = '',
 ):
     x_shape = data_file['data/X'].attrs.get('shape', (1, 1))
     n = x_shape[0]
@@ -47,7 +48,7 @@ def generate_information_plane(
 
     data = defaultdict(list)
 
-    for epoch_data in tqdm(activation_file.values(), ncols=100, ascii=True):
+    for epoch_data in tqdm(activation_data.values(), ncols=100, ascii=True):
         epoch_data: h5py.Group
         epoch_idx = epoch_data.attrs['epoch_idx']
         
@@ -93,6 +94,7 @@ def generate_information_plane(
             data['MI_y'].append(mi_y)
 
     df_data = pd.DataFrame.from_dict(data, orient='columns')
+    df_data.sort_values(by=['Epoch', 'Layer'], inplace=True)
 
     fig, ax = plt.subplots()
 
@@ -110,11 +112,11 @@ def generate_information_plane(
     fig.tight_layout()
 
     if save:
-        plt.savefig(path.join(output_dir, 'information_plane.png'))
-        df_data.set_index('Epoch', drop=True, inplace=True)
-        df_data.to_csv(path.join(output_dir, 'mi_data.csv'), sep=';', decimal=',')
+        plt.savefig(path.join(output_dir, f'information_plane{postfix}.png'))
 
     plt.show(block=True)
+
+    return df_data
 
 
 def _estimate_output_layer_mi(latent: np.ndarray, target: np.ndarray) -> tuple[np.floating, ...]:
