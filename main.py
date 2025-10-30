@@ -97,12 +97,15 @@ def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Names
         else:
             mode = 'a'
 
+        run_idx = run_data.attrs['group_idx']
+
         df_data = information_plane.generate_information_plane(
             run_data,
             data_file,
             save=args.save,
             output_dir=output_dir,
-            postfix=f'_{run_key}'
+            postfix=f'_{run_key}',
+            block_plt=run_idx == (len(activation_file) - 1),
         )
 
         df_data.set_index('Epoch', drop=True, inplace=True)

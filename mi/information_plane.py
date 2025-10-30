@@ -21,6 +21,7 @@ def generate_information_plane(
     save: bool = False,
     output_dir: str = '',
     postfix: str = '',
+    block_plt: bool = True
 ):
     x_shape = data_file['data/X'].attrs.get('shape', (1, 1))
     n = x_shape[0]
@@ -114,7 +115,7 @@ def generate_information_plane(
     if save:
         plt.savefig(path.join(output_dir, f'information_plane{postfix}.png'))
 
-    plt.show(block=True)
+    plt.show(block=block_plt)
 
     return df_data
 
