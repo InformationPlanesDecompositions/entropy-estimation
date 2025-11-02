@@ -35,6 +35,52 @@ def build_parser() -> argparse.ArgumentParser:
     mi_parser = subparsers.add_parser('mi', aliases=['mutual-information'])
     build_mi_parser(mi_parser)
 
+    # ====================
+    # Compare experiments
+    # ====================
+    comparison_parser = subparsers.add_parser('compare', description='Compare experiments based on their information plane, losses, and accuracy')
+    comparison_parser.add_argument(
+        '-c', '--config',
+        type=str,
+        help='Path to configuration .yaml file for comparison',
+        required=True,
+    )
+
+    comparison_parser.add_argument(
+        '--dir-mi',
+        type=str,
+        help='Path to directory containing MI data subdirectories',
+        default='./output/mi'
+    )
+    comparison_parser.add_argument(
+        '--dir-experiments',
+        type=str,
+        help='Path to directory containing the experimental data',
+        required=True,
+    )
+
+    comparison_parser.add_argument(
+        '-r', '--run',
+        type=int,
+        help='Run number (positive integer)',
+        default=0,
+        required=False,
+    )
+    comparison_parser.add_argument(
+        '--accuracy-plot',
+        type=bool,
+        action=argparse.BooleanOptionalAction,
+        help='Plot validation accuracy over epochs',
+        required=False,
+    )
+    comparison_parser.add_argument(
+        '--loss-plot',
+        type=bool,
+        action=argparse.BooleanOptionalAction,
+        help='Plot training and validation loss over epochs',
+        required=False,
+    )
+
     return root_parser
 
 

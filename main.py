@@ -1,12 +1,16 @@
+import argparse
+import itertools
+
 import os
 from os import path
 
 from collections import defaultdict
+
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-
-import argparse
+import matplotlib.axes
+import matplotlib.colors
 
 import numpy as np
 import pandas as pd
@@ -16,6 +20,7 @@ import h5py
 from tqdm import tqdm
 
 import cli.parser
+import cli.configure
 
 import evaluation
 import evaluation.plug_in
@@ -205,6 +210,118 @@ def _compare_entropy(parser: argparse.ArgumentParser, args: argparse.Namespace):
     plt.show(block=True)
 
 
+def _compare_experiments(parser: argparse.ArgumentParser, args: argparse.Namespace):
+    config = cli.configure.read_config(args.config)
+    config = config.get('comparison', config)
+
+    experiments = config.get('experiments', {})
+
+    if type(experiments) != dict or len(experiments) == 0:
+        parser.error(f'Please provide a dict of experiments')
+
+    n_exp = len(experiments)
+
+    if n_exp > 4:
+        print(f'WARNING: {n_exp} experiments were provided, only 4 are supported and will be plotted')
+        experiments = dict(itertools.islice(experiments.items(), 4))
+    elif n_exp < 4:
+        print(f'INFO: Program is designed for 4 plots, but only {n_exp} experiments were provided')
+
+    n_exp = min(n_exp, 4)
+
+    dir_exp = args.dir_experiments
+    dir_mi = args.dir_mi
+
+    if not path.isdir(dir_exp):
+        parser.error(f'Invalid data directory for experiments provided, could not find {dir_exp}')
+
+    if not path.isdir(dir_mi):
+        parser.error(f'Invalid data directory for MI estimates provided, could not find {dir_mi}')
+
+    run_idx = config.get('run_idx', 0) if args.run is None else args.run
+    plot_accuracy = config.get('accuracy_plot', True) if args.accuracy_plot is None else args.accuracy_plot
+    plot_losses = config.get('loss_plot', False) if args.loss_plot is None else args.loss_plot
+
+    dfs_metrics = []
+    dfs_mis = []
+
+    for p, n in experiments.items():
+        df_metrics = pd.read_csv(path.join(dir_exp, p,'metrics.csv'), sep=';', decimal=',')
+        df_mi = pd.read_csv(path.join(dir_mi, p, 'mi_data.csv'), sep=';', decimal=',')
+
+        df_metrics['Experiment'] = n
+        df_mi['Experiment'] = n
+
+        dfs_metrics.append(df_metrics)
+        dfs_mis.append(df_mi)
+
+    df_metrics = pd.concat(dfs_metrics, ignore_index=True)
+    df_mis = pd.concat(dfs_mis, ignore_index=True)
+
+    # --------------------
+    # Plot information planes
+    # --------------------
+
+    fig, axes = plt.subplots(2, 2, sharex=True, sharey=True, figsize=(6.4 * 1.5, 4.8 * 1.5))
+    axes = axes.ravel()
+
+    norm = matplotlib.colors.Normalize(df_mis['Epoch'].min(), df_mis['Epoch'].max())
+    cmap = plt.cm.ScalarMappable(norm=norm, cmap='flare_r')
+    cmap.set_array([])
+
+    for idx, exp_name in enumerate(experiments.values()):
+        ax: matplotlib.axes.Axes = axes[idx]
+
+        df = df_mis[(df_mis['Experiment'] == exp_name) & (df_mis['Run'] == run_idx)]
+
+        sns.scatterplot(
+            data=df, x='MI_x', y='MI_y',
+            hue='Epoch', style='Layer', ax=ax,
+            palette='flare_r', alpha=0.75, s=25
+        )
+        ax.set_title(exp_name)
+        ax.get_legend().remove()
+
+    for ax in axes:
+        ax.set_xlabel(r'$I(X;T_\ell)$')
+        ax.set_ylabel(r'$I(T_\ell;Y)$')
+
+    fig.colorbar(cmap, ax=axes[1::2])
+    fig.subplots_adjust(right=0.8)
+    
+    # --------------------
+    # Plot metrics
+    # --------------------
+
+    for plt_type, show_plt in [('Loss', plot_losses), ('Accuracy', plot_accuracy)]:
+        if not show_plt:
+            continue
+
+        fig, axes = plt.subplots(2, 2, sharex=True, sharey=plt_type == 'Accuracy', figsize=(6.4 * 1.5, 4.8 * 1.5))
+        axes = axes.ravel()
+
+        for idx, exp_name in enumerate(experiments.values()):
+            ax: matplotlib.axes.Axes = axes[idx]
+
+            df = df_metrics[(df_metrics['Experiment'] == exp_name) & (df_metrics['Run'] == run_idx)]
+
+            if plt_type == 'Loss':
+                sns.lineplot(df, x='Epoch', y='Train Loss', ax=ax, label='Train', alpha=0.75)
+                sns.lineplot(df, x='Epoch', y='Val. Loss', ax=ax, label='Validation', ls=':', alpha=0.75)
+            else:
+                sns.lineplot(df, x='Epoch', y='Val. Acc', ax=ax)
+
+            ax.set_title(exp_name)
+        
+        for ax in axes:
+            ax.set_xlabel('Epoch')
+            ax.set_ylabel(plt_type)
+
+        fig.tight_layout()
+    
+    plt.show(block=True)
+
+
 def main():
     parser = cli.parser.build_parser()
     args = parser.parse_args()
@@ -217,6 +334,8 @@ def main():
                 _compare_entropy(parser, args)
         case 'mi' | 'mutual-information':
             _perform_mi_estimation(parser, args)
+        case 'compare':
+            _compare_experiments(parser, args)
 
 
 if __name__ == '__main__':
