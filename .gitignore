@@ -1,4 +1,8 @@
-### Outputs/results ###
+### Configurations
+config.yaml
+config.yml
+
+### Results / outputs
 output/
 
 # Created by https://www.toptal.com/developers/gitignore/api/python,visualstudiocode
