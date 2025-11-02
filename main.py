@@ -74,7 +74,7 @@ def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Names
     output_dir = f'./output/mi/{dir_name}'
 
     if args.save:
-            os.makedirs(output_dir, exist_ok=True)
+        os.makedirs(output_dir, exist_ok=True)
 
     if not activation_file.attrs['has_top_group']:
         df_data = information_plane.generate_information_plane(
@@ -91,13 +91,18 @@ def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Names
     
     mode = None
 
+    run_selection: None | int = args.run
+
     for run_key, run_data in activation_file.items():
+        run_idx = run_data.attrs['group_idx']
+
+        if run_selection is not None and run_idx != run_selection:
+            continue
+
         if mode is None:
             mode = 'w'
         else:
             mode = 'a'
-
-        run_idx = run_data.attrs['group_idx']
 
         df_data = information_plane.generate_information_plane(
             run_data,
@@ -108,6 +113,9 @@ def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Names
             block_plt=run_idx == (len(activation_file) - 1),
         )
 
+        if not args.save:
+            continue
+
         df_data.set_index('Epoch', drop=True, inplace=True)
         df_data['Run'] = run_data.attrs['group_idx']
         df_data.to_csv(
@@ -117,6 +125,9 @@ def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Names
             mode=mode,
             header=mode == 'w'
         )
+
+        if run_selection is not None:
+            break
 
 
 # TODO: Move to package evaluation, either into plug_in.py or model.py

@@ -33,6 +33,33 @@ def build_parser() -> argparse.ArgumentParser:
     # Mutual Information Estimation
     # ====================
     mi_parser = subparsers.add_parser('mi', aliases=['mutual-information'])
+    build_mi_parser(mi_parser)
+
+    return root_parser
+
+
+def build_mi_parser(
+    mi_parser: argparse.ArgumentParser | None,
+) -> argparse.ArgumentParser:
+    def run_selection(value: str):
+        if value is None or value.lower() == 'all':
+            return None
+
+        try:
+            val = int(value)
+
+            if val < 0:
+                raise ValueError()
+
+            return val
+        except ValueError:
+            raise argparse.ArgumentTypeError(
+                f'Invalid argument {value}. Must be a positive integer or "best".'
+            )
+
+    if mi_parser is None:
+        mi_parser = argparse.ArgumentParser()
+
     mi_parser.add_argument(
         '-d', '--data',
         type=str,
@@ -46,8 +73,15 @@ def build_parser() -> argparse.ArgumentParser:
         help='Save the generated plots',
         default=True,
     )
+    mi_parser.add_argument(
+        '-r', '--run',
+        type=run_selection,
+        help='Run number (positive integer), None or "all" for all runs.',
+        default='all',
+        required=False,
+    )
 
-    return root_parser
+    return mi_parser
 
 
 def build_evaluation_parsers(
