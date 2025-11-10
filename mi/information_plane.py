@@ -36,14 +36,7 @@ def generate_information_plane(
     if y_shape[1] > 2:
         raise NotImplementedError('Currently only supported for bi-class targets')
     
-    # TODO: Make this more general
-    # target = _bit_array_to_integer(y.astype(np.int64))
-    target = y[:, 1].astype(np.int64)
-    
-    # if (1 <= y_shape[1] < 64) and np.all(np.logical_or(y == 0, y == 1)):
-    #     target = _bit_array_to_integer(y.astype(np.int64))
-    # else:
-    #     raise NotImplementedError('Currently only supported for bi-class targets')
+    target = np.argmax(y, axis=1)
     
     p_y = np.bincount(target) / n
 
@@ -107,7 +100,9 @@ def generate_information_plane(
     ax.set_xlabel(r'$I(X;T_\ell)$')
     ax.set_ylabel(r'$I(T_\ell;Y)$')
 
-    ax.get_legend().remove()
+    if (lg := ax.get_legend()) is not None:
+        lg.remove()
+        
     ax.figure.colorbar(cmap, ax=sct_ax)
 
     fig.tight_layout()
@@ -139,6 +134,7 @@ def _estimate_output_layer_mi(latent: np.ndarray, target: np.ndarray) -> tuple[n
     mi_y: np.floating = h_yhat - h_yhat_given_y  # type: ignore
 
     return mi_x, mi_y
+
 
 def _bit_array_to_integer(arr: np.ndarray) -> np.ndarray:
     if np.any(np.logical_or(arr < 0, arr > 1)):
