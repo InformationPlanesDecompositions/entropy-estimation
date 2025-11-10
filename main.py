@@ -109,13 +109,18 @@ def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Names
         else:
             mode = 'a'
 
+        if run_selection is not None:
+            block_plt = run_idx == run_selection
+        else:
+            block_plt = run_idx == (len(activation_file) - 1)
+
         df_data = information_plane.generate_information_plane(
             run_data,
             data_file,
             save=args.save,
             output_dir=output_dir,
             postfix=f'_{run_key}',
-            block_plt=run_idx == (len(activation_file) - 1),
+            block_plt=block_plt,
         )
 
         if not args.save:
@@ -280,7 +285,9 @@ def _compare_experiments(parser: argparse.ArgumentParser, args: argparse.Namespa
             palette='flare_r', alpha=0.75, s=25
         )
         ax.set_title(exp_name)
-        ax.get_legend().remove()
+
+        if (lg := ax.get_legend()) is not None:
+            lg.remove()
 
     for ax in axes:
         ax.set_xlabel(r'$I(X;T_\ell)$')
