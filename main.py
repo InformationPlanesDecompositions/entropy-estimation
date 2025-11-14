@@ -81,7 +81,7 @@ def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Names
     if args.save:
         os.makedirs(output_dir, exist_ok=True)
 
-    if not activation_file.attrs['has_top_group']:
+    if not activation_file.attrs.get('has_top_group', False):
         df_data = information_plane.generate_information_plane(
             activation_file,
             data_file,
@@ -252,7 +252,7 @@ def _compare_experiments(parser: argparse.ArgumentParser, args: argparse.Namespa
 
     for p, n in experiments.items():
         df_metrics = pd.read_csv(path.join(dir_exp, p,'metrics.csv'), sep=';', decimal=',')
-        df_mi = pd.read_csv(path.join(dir_mi, p, 'mi_data.csv'), sep=';', decimal=',')
+        df_mi = pd.read_csv(path.join(dir_mi, path.basename(p), 'mi_data.csv'), sep=';', decimal=',')
 
         df_metrics['Experiment'] = n
         df_mi['Experiment'] = n
