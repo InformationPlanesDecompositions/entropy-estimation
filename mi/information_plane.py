@@ -33,10 +33,7 @@ def generate_information_plane(
     if n != y_shape[0]:
         raise ValueError(f'Provided data for X and Y does not have same number of samples, was {n} =/= {y_shape[0]}')
     
-    if y_shape[1] > 2:
-        raise NotImplementedError('Currently only supported for bi-class targets')
-    
-    target = np.argmax(y, axis=1)
+    target = np.argmax(y, axis=1) if len(y_shape) > 1 else y
     
     p_y = np.bincount(target) / n
 
