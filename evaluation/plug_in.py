@@ -107,10 +107,10 @@ def multidimensional_bernoulli(
     # TODO: If MM2 implemented, adjust this to work for both estimates
     df_entropy_interval = _compute_errorbar_per_dimension(df_data)
 
-    file_prefix = path.join(path.basename(output_dir), f'EE_Bernoulli_p{p}_M{n_experiments}_N{n_samples}')
+    file_prefix = f'EE_Bernoulli_p{p}_M{n_experiments}_N{n_samples}'
 
     if save:
-        os.makedirs(path.basename(output_dir), exist_ok=True)
+        os.makedirs(output_dir, exist_ok=True)
 
     fig, ax = plt.subplots()
 
@@ -140,7 +140,7 @@ def multidimensional_bernoulli(
     fig.tight_layout()
 
     if save:
-        plt.savefig(f'{file_prefix}_Estimates.png')
+        plt.savefig(path.join(output_dir, f'{file_prefix}_Estimates.png'))
 
     plt.show(block=False)
 
@@ -160,7 +160,7 @@ def multidimensional_bernoulli(
     fig.tight_layout()
 
     if save:
-        plt.savefig(f'{file_prefix}_AbsErrors.png')
+        plt.savefig(path.join(output_dir, f'{file_prefix}_AbsErrors.png'))
 
     fig, ax = plt.subplots()
 
@@ -174,7 +174,7 @@ def multidimensional_bernoulli(
     ax.grid(True)
 
     if save:
-        plt.savefig(f'{file_prefix}_MMCorrection.png')
+        plt.savefig(path.join(output_dir, f'{file_prefix}_MMCorrection.png'))
 
     plt.show(block=True)
 
