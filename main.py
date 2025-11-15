@@ -141,7 +141,6 @@ def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Names
 
 
 # TODO: Move to package evaluation, either into plug_in.py or model.py
-# TODO: Might not work if activation file is grouped into runs
 def _compare_entropy(parser: argparse.ArgumentParser, args: argparse.Namespace):
     data_dir = args.data
 
@@ -155,11 +154,17 @@ def _compare_entropy(parser: argparse.ArgumentParser, args: argparse.Namespace):
 
     activation_file = h5py.File(activation_path, 'r')
 
+    run_idx = args.run
+
     data = defaultdict(list)
     rng = np.random.default_rng(2620)
 
-    # type: ignore
-    for epoch_data in tqdm(activation_file.values(), ncols=100, ascii=True):
+    run_data = activation_file.get(f'run_{run_idx}', None) if activation_file.attrs['has_top_group'] else activation_file
+
+    if run_data is None:
+        parser.error(f'No run with index {run_idx} found in activation data')
+
+    for epoch_data in tqdm(run_data.values(), ncols=100, ascii=True):  # type: ignore
         epoch_data: h5py.Group
         epoch_idx = epoch_data.attrs['epoch_idx']
 
