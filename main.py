@@ -272,7 +272,7 @@ def _compare_experiments(parser: argparse.ArgumentParser, args: argparse.Namespa
     # Plot information planes
     # --------------------
 
-    fig, axes = plt.subplots(2, 2, sharex=True, sharey=True, figsize=(6.4 * 1.5, 4.8 * 1.5))
+    fig, axes = plt.subplots(2, 2, sharex=True, sharey=False, figsize=(6.4 * 1.5, 4.8 * 1.5))
     axes = axes.ravel()
 
     norm = matplotlib.colors.Normalize(df_mis['Epoch'].min(), df_mis['Epoch'].max())
