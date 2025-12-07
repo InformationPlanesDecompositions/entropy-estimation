@@ -65,7 +65,10 @@ def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Names
     activation_path = path.join(data_dir, 'activations.h5')
     data_path = path.join(data_dir, 'data.h5')
 
-    dir_name = path.basename(path.dirname(activation_path))
+    prefix, dir_name = path.split(path.dirname(data_dir))
+
+    if (prefix := path.basename(prefix)) != 'output':
+        dir_name = path.join(prefix, dir_name)
 
     if not path.isfile(activation_path):
         parser.error(f'No <activations.h5> found in given directory')
@@ -257,7 +260,7 @@ def _compare_experiments(parser: argparse.ArgumentParser, args: argparse.Namespa
 
     for p, n in experiments.items():
         df_metrics = pd.read_csv(path.join(dir_exp, p,'metrics.csv'), sep=';', decimal=',')
-        df_mi = pd.read_csv(path.join(dir_mi, path.basename(p), 'mi_data.csv'), sep=';', decimal=',')
+        df_mi = pd.read_csv(path.join(dir_mi, p, 'mi_data.csv'), sep=';', decimal=',')
 
         df_metrics['Experiment'] = n
         df_mi['Experiment'] = n

@@ -72,6 +72,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=0,
         required=False,
     )
+    
     comparison_parser.add_argument(
         '--accuracy-plot',
         type=bool,
