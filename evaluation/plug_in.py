@@ -1,7 +1,7 @@
-import os
 from os import path
 
 import seaborn as sns
+import matplotlib.axes
 import matplotlib.pyplot as plt
 
 import pandas as pd
@@ -14,192 +14,127 @@ from corrections import mm
 from estimators import plug_in
 
 
-# TODO: Implement for ternary Bernoulli / binomial
-
-
-def onedimensional_bernoulli(n_experiments: int, p: float, n_samples_space: np.ndarray):
-    if n_samples_space.dtype != np.int64:
-        n_samples_space = n_samples_space.astype(np.int64)
-
-    data = defaultdict(list)
-
-    h_true = bernoulli.compute_entropy(p)
-
-    for n_samples in n_samples_space:
-        experiments = bernoulli.generate_samples(p, size=(n_experiments, n_samples))
-
-        mm_first = mm.first_order(experiments[0], n_classes=2)
-        mm_second = mm.second_order(experiments[0], probabilities=np.array([1 - p, p]), n_classes=2)
-
-        h_estimates = [plug_in.estimate_entropy(sample) for sample in experiments]
-
-        for h_hat in h_estimates:
-            data['N'].append(n_samples)
-            data['H^'].append(h_hat)
-            data['MM1'].append(mm_first)
-            data['H^_1'].append(h_hat + mm_first)
-            data['MM2'].append(mm_second)
-            data['H^_2'].append(h_hat + mm_second)
-    
-    df_data = pd.DataFrame(data=data, columns=['N', 'H^', 'MM1', 'H^_1', 'MM2', 'H^_2'])
-
-    fig, ax = plt.subplots()
-
-    ax.axhline(y=h_true, ls='--', c='r', label=r'$H_\text{true}$')
-
-    sns.lineplot(data=df_data, x='N', y='H^_1', ax=ax, errorbar=('sd', 2), label=r'$\hat{H}_\text{MM}$')
-    sns.scatterplot(data=df_data, x='N', y='H^_1', ax=ax, marker='x', s=25)
-
-    fig.tight_layout()
-    plt.show(block=True)
-
-
-# TODO:
-#   - Compute 2nd order MM correction
-def multidimensional_bernoulli(
-    n_experiments: int,
+def _generate_evaluation_data(
     p: float,
-    n_samples: int,
-    *,
-    d_steps: np.ndarray | list | None = None,
-    d_range: tuple[int, int] | None = None,
-    d_n_steps: int = 10,
-    save: bool = True,
-    output_dir: str = '',
-) -> None:
-    if d_steps is None:
-        if d_range is None:
-            raise KeyError(f'Neither dimension steps nor range provided')
-
-        d_min, d_max = d_range
-
-        if d_min > d_max or d_min < 0:
-            raise ValueError(f'Invalid dimension range provided, was [{d_min}, {d_max}]')
-        
-        d_steps = np.linspace(d_min, d_max, d_n_steps)
-
-    if type(d_steps) is not np.ndarray:
-        d_steps = np.array(d_steps)
-
-    if d_steps.dtype != np.int64:
-        d_steps = d_steps.astype(np.int64)
-
+    n_samples: int = 1000,
+    n_experiments: int = 20,
+    max_d: int = 20
+) -> dict[str, list[int | float]]:
     data = defaultdict(list)
 
-    for d in d_steps:
+    for d in range(1, max_d + 1):
         h_true = bernoulli.compute_joint_entropy(p=p, d=d)
-        
-        experiments = bernoulli.generate_samples(p, size=(n_experiments, n_samples, d))
 
-        estimates = _compute_estimates(experiments)
+        experiments = bernoulli.generate_samples(p=p, size=(n_experiments, n_samples, d))
 
-        for h_hat, var_hat, mm_first in estimates:
+        for experiment in experiments:
+            samples_as_int = experiment.dot(1 << np.arange(d - 1, -1, -1))
+
+            h_est = plug_in.estimate_entropy(samples_as_int, use_fast_estimate=True)
+            mm_corr = mm.first_order(samples_as_int)
+            mm_corr_hat = mm.first_order(samples_as_int, n_classes=2 ** d)
+
+            data['p'].append(p)
+            data['N'].append(n_samples)
             data['D'].append(d)
-            data['H_true'].append(h_true)
-            data['H^'].append(h_hat)
-            data['Var^'].append(var_hat)
-            data['MM1'].append(mm_first)
-            data['H^1'].append(h_hat + mm_first)
-            # data['MM2'].append(mm_second)
-            # data['H^2'].append(h_hat + mm_second)
-
-    df_data = pd.DataFrame(data=data)
-    # TODO: If MM2 implemented, adjust this to work for both estimates
-    df_entropy_interval = _compute_errorbar_per_dimension(df_data)
-
-    file_prefix = f'EE_Bernoulli_p{p}_M{n_experiments}_N{n_samples}'
-
-    if save:
-        os.makedirs(output_dir, exist_ok=True)
-
-    fig, ax = plt.subplots()
-
-    ax.set_title(rf'Bernoulli Entropy Estimation ($p={p}$, $M$={n_experiments}, $N$={n_samples})')
-
-    sns.lineplot(data=df_data, x='D', y='H^', c='tab:green', ls=':', ax=ax, errorbar=None, label=r'$\hat{H}$')
-    sns.lineplot(data=df_data, x='D', y='H^1', c='tab:blue', ax=ax, errorbar=None, label=r'$\hat{H}_\text{MM}$')
-    sns.scatterplot(data=df_data, x='D', y='H^1', c='tab:blue', ax=ax, marker='x', s=25)
-
-    ax.fill_between(
-        x=df_entropy_interval['D'],
-        y1=df_entropy_interval['H^1_lower'],
-        y2=df_entropy_interval['H^1_upper'],
-        alpha=0.25,
-        color='tab:blue'
-    )
-
-    sns.lineplot(data=df_data, x='D', y='H_true', ax=ax, label=r'$H_\text{true}$', c='tab:red', ls='--', errorbar=None)
-
-    ax.set_xlabel(r'RV vector size $D$')
-
-    ax.set_ylabel(r'Entropy $H$')
-    # ax.set_yscale('log', base=2)
-
-    ax.grid(True)
-
-    fig.tight_layout()
-
-    if save:
-        plt.savefig(path.join(output_dir, f'{file_prefix}_Estimates.png'))
-
-    plt.show(block=False)
-
-    fig, ax = plt.subplots()
-
-    ax.set_title(rf'Absolute Error w.r.t. $H_\text{{true}}$ ($p={p}$, $M$={n_experiments}, $N$={n_samples})')
-
-    sns.lineplot(x=df_data['D'], y=(df_data['H_true'] - df_data['H^']).abs(), ax=ax, label=r'$\hat{H}$')
-    sns.lineplot(x=df_data['D'], y=(df_data['H_true'] - df_data['H^1']).abs(), ax=ax, label=r'$\hat{H}_\text{MM}$')
-
-    ax.set_xlabel(r'RV vector size $D$')
-    ax.set_ylabel(r'$|e|$')
-    ax.set_yscale('log', base=2)
-
-    ax.grid(True)
-
-    fig.tight_layout()
-
-    if save:
-        plt.savefig(path.join(output_dir, f'{file_prefix}_AbsErrors.png'))
-
-    fig, ax = plt.subplots()
-
-    ax.set_title(rf'Miller-Madow Correction ($p={p}$, $M$={n_experiments}, $N$={n_samples})')
-
-    sns.lineplot(data=df_data, x='D', y='MM1', ax=ax, errorbar=None, label=r'$1^\text{st}$ order')
+            data['H'].append(h_true)
+            data['H^'].append(h_est)
+            data['MM'].append(mm_corr)
+            data['H^_MM'].append(h_est + mm_corr)
+            data['MM^'].append(mm_corr_hat)
+            data['H^_MM^'].append(h_est + mm_corr_hat)
     
-    ax.set_xlabel(r'RV vector size $D$')
-    ax.set_ylabel(r'Correction')
-
-    ax.grid(True)
-
-    if save:
-        plt.savefig(path.join(output_dir, f'{file_prefix}_MMCorrection.png'))
-
-    plt.show(block=True)
-
-
-def _compute_estimates(experiments: np.ndarray) -> list[tuple[float, float, float]]:
-    data = list()
-
-    for samples in experiments:
-        entropy = plug_in.estimate_entropy(samples)
-        entropy_variance = plug_in.estimate_entropy_variance(samples, entropy_hat=entropy)
-        mm_first = mm.first_order(samples)
-
-        data.append((entropy, entropy_variance, mm_first))
-
     return data
 
 
-def _compute_errorbar_per_dimension(df_data: pd.DataFrame) -> pd.DataFrame:
-    variances = df_data[['D', 'Var^']].groupby(by='D').mean().values.flatten()
-    entropy = df_data[['D', 'H^1']].groupby(by='D').mean().values.flatten()
+def evaluate_plugin_estimate(
+    n_experiments: int = 20,
+    n_samples: int = 1000,
+    max_d: int = 20,
+    use_existing_data: bool = True,
+    save: bool = True,
+    output_dir: str = '',
+):
+    file_prefix = f'Bernoulli_N{f"{n_samples:.0e}".replace('+', '')}_D{max_d}'
+    
+    data_path = path.join(output_dir, f'{file_prefix}_data.csv')
+    plot_path = path.join(output_dir, f'{file_prefix}_plot.png')
 
-    df_interval = pd.DataFrame(data={
-        'D': df_data['D'].unique(),
-        'H^1_lower': entropy - np.sqrt(variances),
-        'H^1_upper': entropy + np.sqrt(variances),
-    })
+    n_experiments = 20
+    ps = [0.5, 0.7, 0.9]
 
-    return df_interval
+    if use_existing_data and (path.exists(data_path) and path.isfile(data_path)):
+        df_data = pd.read_csv(data_path, index_col=0, decimal=',', sep=';')
+    else:
+        data = defaultdict(list)
+
+        for p in ps:
+            _data = _generate_evaluation_data(p, n_samples, n_experiments=n_experiments)
+
+            for k, vs in _data.items():
+                data[k].extend(vs)
+
+        df_data = pd.DataFrame(data)
+
+        if save:
+            df_data.to_csv(data_path, sep=';', decimal=',')
+
+    axes_grid_kws = {
+        'visible': True,
+        'alpha': 0.75,
+        'ls': '--',
+    }
+    axes_xticks = np.arange(2, max_d + 2, 2)
+
+    fig, axes = plt.subplots(nrows=3, ncols=2, sharex='col', sharey=False, figsize=(10, 12))
+
+    for idx, p in enumerate(ps):
+        axes_p: list[matplotlib.axes.Axes] = axes[idx]
+        ax_h, ax_err = axes_p
+
+        axes_title = rf'$p = {p}$'
+        
+        df_p = df_data[df_data['p'] == p]
+
+        sns.lineplot(data=df_p, x='D', y='H', ax=ax_h, c='tab:red', ls=':', alpha=0.75, errorbar=None, label=r'$H_\text{true}$')
+        sns.lineplot(data=df_p, x='D', y='H^', c='tab:green', ls='-', ax=ax_h, label=r'$\hat{H}$')
+        # sns.scatterplot(data=df_p, x='D', y='H^', c='tab:green', ax=ax_h, marker='x', s=25, label=None)
+
+        sns.lineplot(data=df_p, x='D', y='H^_MM', c='tab:blue', ls='-.', ax=ax_h, errorbar=None, label=r'$\hat{H}_\text{MM}$')
+        sns.lineplot(data=df_p, x='D', y='H^_MM^', c='tab:orange', ls='--', ax=ax_h, errorbar=None, label=r'$\hat{H}_\text{MM}$, $\hat{k} = |\mathcal{X}|$')
+
+        ax_h.get_legend().remove()
+
+        ax_h.set_title(axes_title)
+
+        ax_h.set_xticks(axes_xticks)
+        ax_h.set_xlabel(r'RV vector size $D$')
+        ax_h.set_ylabel(r'Entropy Estimate $H$')
+        ax_h.set_ylim((0, df_p['H'].max() + 0.5))
+        
+        ax_h.grid(**axes_grid_kws)
+
+        df_err = df_p[['H^', 'H^_MM', 'H^_MM^']].sub(df_p['H'], axis=0).abs()
+        df_err['D'] = df_p['D']
+
+        sns.lineplot(data=df_err, x='D', y='H^', c='tab:green', ls='-', ax=ax_err)
+        sns.lineplot(data=df_err, x='D', y='H^_MM', c='tab:blue', ls='-.', ax=ax_err)
+        sns.lineplot(data=df_err, x='D', y='H^_MM^', c='tab:orange', ls='--', ax=ax_err)
+
+        ax_err.set_title(axes_title)
+
+        ax_err.set_xticks(axes_xticks)
+        ax_err.set_xlabel(r'RV Vector size $D$')
+        ax_err.set_ylabel(r'Absolute Error $|\varepsilon|$')
+        ax_err.set_yscale('log', base=2)
+
+        ax_err.grid(**axes_grid_kws)
+
+    handles, labels = axes[0, 0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc='upper center', ncol=4, bbox_to_anchor=(0.5, 1.0))
+    fig.tight_layout(rect=(0, 0, 1, 0.975))
+
+    if save:
+        plt.savefig(plot_path)
+
+    plt.show(block=True)

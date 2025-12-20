@@ -29,31 +29,24 @@ from mi import information_plane
 
 
 def _perform_evaluation(parser: argparse.ArgumentParser, args: argparse.Namespace):
-    if args.evaluation_type == 'plug-in':
-        p: float = args.success_prob
-        n_experiments: int = args.n_experiments
+    if args.evaluation_type != 'plug-in':
+        parser.error(f'Unknown evaluation target <{args.evaluation_type}>')
 
-        n_sample_steps: list[int] = args.n_samples
+    n_experiments: int = args.n_experiments
+    n_samples: int = args.n_samples
+    max_d: int = args.max_dimensions
 
-        if (dimensions := args.dimensions) is None:
-            if len(n_sample_steps) < 3:
-                parser.error(f'Please provide 3 parameters für argument -N if -D is not set')
+    save: bool = args.save
+    use_existing: bool = args.use_existing
+    output_dir = args.output
 
-            n_start, n_stop, n_steps = n_sample_steps[:3]
-            n_sample_space = np.linspace(n_start, n_stop, n_steps).astype(np.int64)
+    if save:
+        os.makedirs(output_dir, exist_ok=True)
 
-            evaluation.plug_in.onedimensional_bernoulli(n_experiments, p, n_sample_space)
-
-            return
-        
-        n_samples = n_sample_steps[0]
-        d_steps = np.linspace(*dimensions)
-
-        evaluation.plug_in.multidimensional_bernoulli(
-            n_experiments, p, n_samples,
-            d_steps=d_steps,
-            save=args.save, output_dir=args.output
-        )
+    evaluation.plug_in.evaluate_plugin_estimate(
+        n_experiments, n_samples, max_d,
+        use_existing, save, output_dir
+    )
 
 
 def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Namespace):

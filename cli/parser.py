@@ -156,31 +156,26 @@ def build_evaluation_parsers(
         '-M', '--n-experiments',
         type=int,
         help='Number of experiments to conduct',
-        required=True,
+        default=20,
     )
     plugin_subparser.add_argument(
-        '-p', '--success-prob',
-        type=float,
-        help='Success probability per trial',
-        required=True,
-    )
-    plugin_subparser.add_argument(
-        '-D', '--dimensions',
+        '-D', '--max_dimensions',
         type=int,
-        nargs=3,
-        help='The dimensions of the Bernoulli RV vector. If none is provided, assume 1D. Otherwise,'
-        + ' use arguments as (start, stop, n_steps)',
-        metavar=('START', 'STOP', 'N_STEPS'),
-        required=False,
+        default=20,
+        help='The maximum number of dimension of the Bernoulli RV vectors',
     )
     plugin_subparser.add_argument(
         '-N', '--n_samples',
         type=int,
-        nargs='+',
-        help='The number of samples per experiment. If -D is provided, the first integer will be'
-        + ' used for all experiments. Otherwise, use arguments as (start, stop, n_steps)',
-        metavar=('N'),
+        help='The number of samples per experiment',
         required=True,
+    )
+    plugin_subparser.add_argument(
+        '--use-existing',
+        type=bool,
+        action=argparse.BooleanOptionalAction,
+        help='Use already existing generated data for plotting. If not existing but set to True, the data will be generated regardless',
+        default=True
     )
     plugin_subparser.add_argument(
         '-s', '--save',
@@ -193,7 +188,7 @@ def build_evaluation_parsers(
         '-o', '--output',
         type=str,
         help='Target directory for generated output',
-        default='./output',
+        default='output/ee',
     )
 
     return eval_parser
