@@ -8,6 +8,9 @@ Applied as H^MM = H^hat + MM
 import numpy as np
 
 
+_nats_to_bits = np.log2(np.e)
+
+
 # TODO:
 #   - Add axis keyword to work on (M, N, D) arrays
 def first_order(samples: np.ndarray, n_classes: int | None = None) -> float:
@@ -20,7 +23,7 @@ def first_order(samples: np.ndarray, n_classes: int | None = None) -> float:
     if n_classes is None:
         n_classes = len(np.unique(samples, axis=0))
 
-    return (n_classes - 1) / (2 * samples.shape[0])
+    return _nats_to_bits * (n_classes - 1) / (2 * samples.shape[0])
 
 
 # TODO:
@@ -41,6 +44,6 @@ def second_order(
 
     correction = first_order(samples, n_classes=n_classes)
 
-    correction -= (1 - sum(1 / probabilities)) / (12 * len(samples) ** 2)
+    correction -= _nats_to_bits * (1 - sum(1 / probabilities)) / (12 * len(samples) ** 2)
 
     return correction
