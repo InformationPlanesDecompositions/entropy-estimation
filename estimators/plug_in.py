@@ -2,21 +2,28 @@ from collections import Counter
 
 import numpy as np
 
+# See Antos and Kontoyiannis, 2001
+
 
 # TODO: Adjust to multi-dim array to return entropy per experiment (i.e. 0 index)
-def estimate_entropy(samples: np.ndarray) -> float:
+def estimate_entropy(samples: np.ndarray, use_fast_estimate: bool = False) -> float:
     if len(samples.shape) > 2:
         raise ValueError(f'Currently only supported for 1 or 2-dim arrays')
     
     if len(samples.shape) == 0:
         return 0
 
-    p = _compute_observed_rates(samples)
-    p = p[p != 0]
+    # TODO: Rewrite to check if multi-dim and bitwise
+    if use_fast_estimate:
+        p = fast_empirical_distribution(samples)
+    else:
+        p = _compute_observed_rates(samples)
+        p = p[p != 0]
 
     return -np.sum(p * np.log2(p))
 
 
+# Ricci et al., 2021
 def estimate_entropy_variance(
     samples: np.ndarray,
     entropy_hat: float | None = None
@@ -49,6 +56,15 @@ def fast_joint_probabilitiy_estimation(x: np.ndarray, y: np.ndarray):
     joint_count = Counter(zip(x, y))
 
     return {xy: count / n for xy, count in joint_count.items()}
+
+
+def fast_empirical_distribution(samples: np.ndarray) -> np.ndarray:
+    if not issubclass(samples.dtype.type, np.integer):
+        raise ValueError(f'Only supported for integer arrays')
+
+    n = samples.shape[0]
+    
+    return np.divide(list(Counter(samples).values()), n)
 
 
 def _compute_observed_rates(samples: np.ndarray) -> np.ndarray:
