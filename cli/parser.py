@@ -133,6 +133,13 @@ def build_mi_parser(
         default='all',
         required=False,
     )
+    mi_parser.add_argument(
+        '--show-plots',
+        type=bool,
+        action=argparse.BooleanOptionalAction,
+        help='Display the plots',
+        default=True,
+    )
 
     return mi_parser
 

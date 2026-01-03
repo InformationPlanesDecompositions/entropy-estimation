@@ -14,14 +14,14 @@ from tqdm import tqdm
 from estimators import plug_in
 
 
-# TODO: Make this work for MNIST/other variants
 def generate_information_plane(
     activation_data: h5py.File | h5py.Group,
     data_file: h5py.File,
     save: bool = False,
     output_dir: str = '',
     postfix: str = '',
-    block_plt: bool = True
+    block_plt: bool = True,
+    show_plt: bool = True,
 ):
     x_shape = data_file['data/X'].attrs.get('shape', (1, 1))
     n = x_shape[0]
@@ -41,7 +41,7 @@ def generate_information_plane(
 
     for epoch_data in tqdm(activation_data.values(), ncols=100, ascii=True):
         epoch_data: h5py.Group
-        epoch_idx = epoch_data.attrs['epoch_idx']
+        epoch_idx = epoch_data.attrs.get('epoch_idx', default=0)
         
         for layer_data in epoch_data.values():
             layer_idx = layer_data.attrs['layer_idx']
@@ -87,9 +87,22 @@ def generate_information_plane(
     df_data = pd.DataFrame.from_dict(data, orient='columns')
     df_data.sort_values(by=['Epoch', 'Layer'], inplace=True)
 
+    if not save and not show_plt:
+        return df_data
+
+    min_epoch, max_epoch = df_data['Epoch'].min(), df_data['Epoch'].max()
+
+    epoch_spacing = np.unique(np.logspace(
+        min_epoch, np.log10(max_epoch),
+        num=300, base=10,
+        dtype=int
+    ))
+    epoch_spacing = np.append(epoch_spacing, [min_epoch, max_epoch - 1])
+
+    # TODO: Split me
     fig, ax = plt.subplots()
 
-    norm = matplotlib.colors.Normalize(df_data['Epoch'].min(), df_data['Epoch'].max())
+    norm = matplotlib.colors.Normalize(min_epoch, max_epoch)
     cmap = plt.cm.ScalarMappable(norm=norm, cmap='flare_r')
     cmap.set_array([])
 
@@ -107,7 +120,10 @@ def generate_information_plane(
     if save:
         plt.savefig(path.join(output_dir, f'information_plane{postfix}.png'))
 
-    plt.show(block=block_plt)
+    if show_plt:
+        plt.show(block=block_plt)
+    else:
+        plt.close()
 
     return df_data
 

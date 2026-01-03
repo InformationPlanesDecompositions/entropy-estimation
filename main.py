@@ -74,6 +74,8 @@ def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Names
 
     output_dir = f'./output/mi/{dir_name}'
 
+    show_plt = args.show_plots
+
     if args.save:
         os.makedirs(output_dir, exist_ok=True)
 
@@ -82,7 +84,8 @@ def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Names
             activation_file,
             data_file,
             save=args.save,
-            output_dir=output_dir
+            output_dir=output_dir,
+            show_plt=show_plt,
         )
 
         df_data.set_index('Epoch', drop=True, inplace=True)
@@ -117,6 +120,7 @@ def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Names
             output_dir=output_dir,
             postfix=f'_{run_key}',
             block_plt=block_plt,
+            show_plt=show_plt,
         )
 
         if not args.save:
