@@ -2,10 +2,8 @@ from collections import Counter
 
 import numpy as np
 
+
 # See Antos and Kontoyiannis, 2001
-
-
-# TODO: Adjust to multi-dim array to return entropy per experiment (i.e. 0 index)
 def estimate_entropy(samples: np.ndarray, use_fast_estimate: bool = False) -> float:
     if len(samples.shape) > 2:
         raise ValueError(f'Currently only supported for 1 or 2-dim arrays')
@@ -23,10 +21,25 @@ def estimate_entropy(samples: np.ndarray, use_fast_estimate: bool = False) -> fl
     return -np.sum(p * np.log2(p))
 
 
+# Miller and Madow 1954 (through Luce, 1960)
+def compute_entropy_variance(p: float, d: int, h_true: np.floating | float):
+    import scipy.special
+
+    q = 1 - p
+
+    lhs = np.sum([
+        scipy.special.binom(d, k) * p ** k * q ** (d - k) * np.pow(k * np.log2(p) + (d - k) * np.log2(q), 2)
+        for k in range(0, d + 1)
+    ])
+
+    return lhs - np.pow(h_true, 2)
+
+
 # Ricci et al., 2021
 def estimate_entropy_variance(
     samples: np.ndarray,
-    entropy_hat: float | None = None
+    entropy_hat: float | np.floating | None = None,
+    use_fast_estimate: bool = False,
 ) -> float:
     if len(samples.shape) > 2:
         raise ValueError(f'Currently only supported for 1 or 2-dim arrays')
@@ -36,10 +49,13 @@ def estimate_entropy_variance(
 
     # A bit inefficient but not important for now
     if entropy_hat is None:
-        entropy_hat = estimate_entropy(samples)
+        entropy_hat = estimate_entropy(samples, use_fast_estimate)
 
-    p = _compute_observed_rates(samples)
-    p = p[p != 0]
+    if use_fast_estimate:
+        p = fast_empirical_distribution(samples)
+    else:
+        p = _compute_observed_rates(samples)
+        p = p[p != 0]
 
     variance = np.sum(p * np.log2(p) ** 2)
     variance -= entropy_hat ** 2

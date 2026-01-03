@@ -3,6 +3,7 @@ from os import path
 import seaborn as sns
 import matplotlib.axes
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
 
 import pandas as pd
 import numpy as np
@@ -24,6 +25,7 @@ def _generate_evaluation_data(
 
     for d in range(1, max_d + 1):
         h_true = bernoulli.compute_joint_entropy(p=p, d=d)
+        var_true = plug_in.compute_entropy_variance(p=p, d=d, h_true=h_true)
 
         experiments = bernoulli.generate_samples(p=p, size=(n_experiments, n_samples, d))
 
@@ -32,7 +34,8 @@ def _generate_evaluation_data(
 
             h_est = plug_in.estimate_entropy(samples_as_int, use_fast_estimate=True)
             mm_corr = mm.first_order(samples_as_int)
-            mm_corr_hat = mm.first_order(samples_as_int, n_classes=2 ** d)
+
+            var_est = plug_in.estimate_entropy_variance(samples_as_int, h_est, use_fast_estimate=True)
 
             data['p'].append(p)
             data['N'].append(n_samples)
@@ -41,8 +44,8 @@ def _generate_evaluation_data(
             data['H^'].append(h_est)
             data['MM'].append(mm_corr)
             data['H^_MM'].append(h_est + mm_corr)
-            data['MM^'].append(mm_corr_hat)
-            data['H^_MM^'].append(h_est + mm_corr_hat)
+            data['Var'].append(var_true / n_samples)
+            data['Var^'].append(var_est)
     
     return data
 
@@ -58,7 +61,7 @@ def evaluate_plugin_estimate(
     file_prefix = f'Bernoulli_N{f"{n_samples:.0e}".replace('+', '')}_D{max_d}'
     
     data_path = path.join(output_dir, f'{file_prefix}_data.csv')
-    plot_path = path.join(output_dir, f'{file_prefix}_plot.png')
+    plot_prefix = path.join(output_dir, f'{file_prefix}_plot')
 
     n_experiments = 20
     ps = [0.5, 0.7, 0.9]
@@ -86,22 +89,22 @@ def evaluate_plugin_estimate(
     }
     axes_xticks = np.arange(2, max_d + 2, 2)
 
-    fig, axes = plt.subplots(nrows=3, ncols=2, sharex='col', sharey=False, figsize=(10, 12))
+    fig, axes = plt.subplots(nrows=3, ncols=2, sharex='col', sharey=False, figsize=(8, 12))
+    fig_var, axes_var = plt.subplots(nrows=1, ncols=3, sharex=False, sharey=False, figsize=(12, 4))
+    axes_var = axes_var.ravel()
 
     for idx, p in enumerate(ps):
         axes_p: list[matplotlib.axes.Axes] = axes[idx]
         ax_h, ax_err = axes_p
+        ax_var: matplotlib.axes.Axes = axes_var[idx]
 
         axes_title = rf'$p = {p}$'
         
         df_p = df_data[df_data['p'] == p]
 
-        sns.lineplot(data=df_p, x='D', y='H', ax=ax_h, c='tab:red', ls=':', alpha=0.75, errorbar=None, label=r'$H_\text{true}$')
-        sns.lineplot(data=df_p, x='D', y='H^', c='tab:green', ls='-', ax=ax_h, label=r'$\hat{H}$')
-        # sns.scatterplot(data=df_p, x='D', y='H^', c='tab:green', ax=ax_h, marker='x', s=25, label=None)
-
-        sns.lineplot(data=df_p, x='D', y='H^_MM', c='tab:blue', ls='-.', ax=ax_h, errorbar=None, label=r'$\hat{H}_\text{MM}$')
-        sns.lineplot(data=df_p, x='D', y='H^_MM^', c='tab:orange', ls='--', ax=ax_h, errorbar=None, label=r'$\hat{H}_\text{MM}$, $\hat{k} = |\mathcal{X}|$')
+        sns.lineplot(data=df_p, x='D', y='H', ax=ax_h, c='tab:red', ls=':', alpha=0.75, errorbar=None, label=r'Truth')
+        sns.lineplot(data=df_p, x='D', y='H^', c='tab:green', ls='-', ax=ax_h, label=r'Plug-in')
+        sns.lineplot(data=df_p, x='D', y='H^_MM', c='tab:blue', ls='-.', ax=ax_h, errorbar=None, label=r'Miller-Madow')
 
         ax_h.get_legend().remove()
 
@@ -114,12 +117,11 @@ def evaluate_plugin_estimate(
         
         ax_h.grid(**axes_grid_kws)
 
-        df_err = df_p[['H^', 'H^_MM', 'H^_MM^']].sub(df_p['H'], axis=0).abs()
+        df_err = df_p[['H^', 'H^_MM']].sub(df_p['H'], axis=0).abs()
         df_err['D'] = df_p['D']
 
         sns.lineplot(data=df_err, x='D', y='H^', c='tab:green', ls='-', ax=ax_err)
         sns.lineplot(data=df_err, x='D', y='H^_MM', c='tab:blue', ls='-.', ax=ax_err)
-        sns.lineplot(data=df_err, x='D', y='H^_MM^', c='tab:orange', ls='--', ax=ax_err)
 
         ax_err.set_title(axes_title)
 
@@ -130,11 +132,29 @@ def evaluate_plugin_estimate(
 
         ax_err.grid(**axes_grid_kws)
 
+        sns.lineplot(data=df_p, x='D', y='Var', c='tab:red', ls=':', ax=ax_var, alpha=0.75, errorbar=None)
+        sns.lineplot(data=df_p, x='D', y='Var^', c='tab:green', ls='-', ax=ax_var)
+
+        ax_var.grid(**axes_grid_kws)
+
+        ax_var.set_title(axes_title)
+
+        ax_var.set_xticks(axes_xticks)
+        ax_var.set_xlabel(r'RV vector size $D$')
+        ax_var.set_ylabel(r'Entropy Variance Estimate $\sigma^2_H$')
+
+        ax_var.yaxis.set_major_formatter(FuncFormatter(lambda x, _: f'{float(x * 1e3):.2f}'))
+
+        ax_var.text(0.01, 1.02, r'$1e{-3}$', transform=ax_var.transAxes, va='bottom', ha='left')
+        
     handles, labels = axes[0, 0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc='upper center', ncol=4, bbox_to_anchor=(0.5, 1.0))
+    fig.legend(handles, labels, loc='upper center', ncol=3, bbox_to_anchor=(0.5, 1.0))
     fig.tight_layout(rect=(0, 0, 1, 0.975))
 
+    fig_var.tight_layout()
+
     if save:
-        plt.savefig(plot_path)
+        fig.savefig(f'{plot_prefix}_entropy.pdf')
+        fig_var.savefig(f'{plot_prefix}_variance.pdf')
 
     plt.show(block=True)
