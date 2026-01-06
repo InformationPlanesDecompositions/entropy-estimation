@@ -55,89 +55,80 @@ def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Names
     if not path.isdir(data_dir):
         parser.error(f'Please provide an existing directory, did not find {data_dir}')
 
-    activation_path = path.join(data_dir, 'activations.h5')
-    data_path = path.join(data_dir, 'data.h5')
-
-    prefix, dir_name = path.split(path.dirname(data_dir))
+    prefix, dir_name = path.split(path.dirname(data_dir) if path.basename(data_dir) == '' else data_dir)
 
     if (prefix := path.basename(prefix)) != 'output':
         dir_name = path.join(prefix, dir_name)
 
-    if not path.isfile(activation_path):
-        parser.error(f'No <activations.h5> found in given directory')
+    output_dir = f'output/mi/{dir_name}'
 
-    if not path.isfile(data_path):
-        parser.error(f'No <data.h5> found in given directory')
+    show_plt = bool(args.show_plots)
+    compute_mi = bool(args.compute_mi)
 
-    activation_file = h5py.File(activation_path, 'r')
-    data_file = h5py.File(data_path, 'r')
+    mi_data_path = path.join(output_dir, 'mi_data.csv')
 
-    output_dir = f'./output/mi/{dir_name}'
+    if not compute_mi:
+        if not path.isfile(mi_data_path):
+            parser.error(f'Could not find existing MI data in {output_dir}')
 
-    show_plt = args.show_plots
+        df_data = pd.read_csv(path.join(output_dir, 'mi_data.csv'), decimal=',', sep=';')
+    else:
+        activation_path = path.join(data_dir, 'activations.h5')
+        data_path = path.join(data_dir, 'data.h5')
 
-    if args.save:
-        os.makedirs(output_dir, exist_ok=True)
+        if not path.isfile(activation_path):
+            parser.error(f'No <activations.h5> found in given directory')
 
-    if not activation_file.attrs.get('has_top_group', False):
-        df_data = information_plane.generate_information_plane(
-            activation_file,
-            data_file,
-            save=args.save,
-            output_dir=output_dir,
-            show_plt=show_plt,
-        )
+        if not path.isfile(data_path):
+            parser.error(f'No <data.h5> found in given directory')
 
-        df_data.set_index('Epoch', drop=True, inplace=True)
-        df_data.to_csv(path.join(output_dir, 'mi_data.csv'), sep=';', decimal=',')
+        activation_file = h5py.File(activation_path, 'r')
+        data_file = h5py.File(data_path, 'r')
 
+        if not activation_file.attrs.get('has_top_group', False):
+            activation_iter = enumerate([activation_file])
+        else:
+            activation_iter = activation_file.items()
+
+        run_selection: None | int = args.run
+
+        dfs: list[pd.DataFrame] = []
+
+        for _, run_data in activation_iter:
+            run_idx = run_data.attrs.get('group_idx', 0)
+
+            if run_selection is not None and run_idx != run_selection:
+                continue
+
+            df = information_plane.estimate_mi_data(run_data, data_file)
+            df.set_index('Epoch', drop=True, inplace=True)
+            df['Run'] = run_idx
+
+            dfs.append(df)
+
+            if run_selection is not None:
+                break
+        
+        df_data = pd.concat(dfs)
+
+        if args.save:
+            df_data.to_csv(mi_data_path, decimal=',', sep=';')
+        
+        df_data.reset_index(drop=False, inplace=True)
+    
+    if not show_plt and not args.save:
         return
     
-    mode = None
+    run_indices = df_data['Run'].unique()
+    last_run = df_data['Run'].max()
 
-    run_selection: None | int = args.run
+    for run_idx in run_indices:
+        df_run = df_data[df_data['Run'] == run_idx]
 
-    for run_key, run_data in activation_file.items():
-        run_idx = run_data.attrs['group_idx']
-
-        if run_selection is not None and run_idx != run_selection:
-            continue
-
-        if mode is None:
-            mode = 'w'
-        else:
-            mode = 'a'
-
-        if run_selection is not None:
-            block_plt = run_idx == run_selection
-        else:
-            block_plt = run_idx == (len(activation_file) - 1)
-
-        df_data = information_plane.generate_information_plane(
-            run_data,
-            data_file,
-            save=args.save,
-            output_dir=output_dir,
-            postfix=f'_{run_key}',
-            block_plt=block_plt,
-            show_plt=show_plt,
+        information_plane.plot_information_plane(
+            df_run, show_plt, block_plt=run_idx == last_run,
+            save=args.save, output_dir=output_dir, postfix=f'_{run_idx}',
         )
-
-        if not args.save:
-            continue
-
-        df_data.set_index('Epoch', drop=True, inplace=True)
-        df_data['Run'] = run_data.attrs['group_idx']
-        df_data.to_csv(
-            path.join(output_dir, 'mi_data.csv'),
-            sep=';',
-            decimal=',',
-            mode=mode,
-            header=mode == 'w'
-        )
-
-        if run_selection is not None:
-            break
 
 
 # TODO: Move to package evaluation, either into plug_in.py or model.py
@@ -279,10 +270,19 @@ def _compare_experiments(parser: argparse.ArgumentParser, args: argparse.Namespa
     cmap = plt.cm.ScalarMappable(norm=norm, cmap='flare_r')
     cmap.set_array([])
 
+    epoch_spacing = np.unique(np.logspace(
+        0, np.log10(3000),
+        num=300, base=10,
+        dtype=int
+    ))
+    epoch_spacing = np.append(epoch_spacing, [0, 2999])
+
     for idx, exp_name in enumerate(experiments.values()):
         ax: matplotlib.axes.Axes = axes[idx]
 
         df = df_mis[(df_mis['Experiment'] == exp_name) & (df_mis['Run'] == run_idx)]
+
+        df = df[df['Epoch'].isin(epoch_spacing)]
 
         sns.scatterplot(
             data=df, x='MI_x', y='MI_y',

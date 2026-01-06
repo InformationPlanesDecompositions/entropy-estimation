@@ -14,15 +14,7 @@ from tqdm import tqdm
 from estimators import plug_in
 
 
-def generate_information_plane(
-    activation_data: h5py.File | h5py.Group,
-    data_file: h5py.File,
-    save: bool = False,
-    output_dir: str = '',
-    postfix: str = '',
-    block_plt: bool = True,
-    show_plt: bool = True,
-):
+def estimate_mi_data(activation_data: h5py.File | h5py.Group, data_file: h5py.File):
     x_shape = data_file['data/X'].attrs.get('shape', (1, 1))
     n = x_shape[0]
 
@@ -87,26 +79,39 @@ def generate_information_plane(
     df_data = pd.DataFrame.from_dict(data, orient='columns')
     df_data.sort_values(by=['Epoch', 'Layer'], inplace=True)
 
-    if not save and not show_plt:
-        return df_data
+    return df_data
 
+
+def plot_information_plane(
+    df_data: pd.DataFrame,
+    show_plt: bool = True,
+    block_plt: bool = True,
+    save: bool = True,
+    output_dir: str = '',
+    postfix: str = '',
+):
     min_epoch, max_epoch = df_data['Epoch'].min(), df_data['Epoch'].max()
 
     epoch_spacing = np.unique(np.logspace(
-        min_epoch, np.log10(max_epoch),
+        min_epoch if min_epoch == 0 else np.log10(min_epoch), np.log10(max_epoch),
         num=300, base=10,
         dtype=int
     ))
     epoch_spacing = np.append(epoch_spacing, [min_epoch, max_epoch - 1])
 
-    # TODO: Split me
     fig, ax = plt.subplots()
 
     norm = matplotlib.colors.Normalize(min_epoch, max_epoch)
     cmap = plt.cm.ScalarMappable(norm=norm, cmap='flare_r')
     cmap.set_array([])
 
-    sct_ax = sns.scatterplot(data=df_data, x='MI_x', y='MI_y', hue='Epoch', style='Layer', ax=ax, palette='flare_r', alpha=0.75)
+    sct_ax = sns.scatterplot(
+        data=df_data[df_data['Epoch'].isin(epoch_spacing)],
+        x='MI_x', y='MI_y',
+        hue='Epoch', style='Layer', palette='flare_r', alpha=0.75,
+        ax=ax,
+    )
+
     ax.set_xlabel(r'$I(X;T_\ell)$')
     ax.set_ylabel(r'$I(T_\ell;Y)$')
 
@@ -124,8 +129,6 @@ def generate_information_plane(
         plt.show(block=block_plt)
     else:
         plt.close()
-
-    return df_data
 
 
 def _estimate_output_layer_mi(latent: np.ndarray, target: np.ndarray) -> tuple[np.floating, ...]:

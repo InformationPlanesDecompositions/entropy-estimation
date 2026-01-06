@@ -140,6 +140,13 @@ def build_mi_parser(
         help='Display the plots',
         default=True,
     )
+    mi_parser.add_argument(
+        '--compute-mi',
+        type=bool,
+        action=argparse.BooleanOptionalAction,
+        help='(Re-)compute the mutual information of the experiment',
+        default=True,
+    )
 
     return mi_parser
 
