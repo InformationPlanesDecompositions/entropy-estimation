@@ -92,12 +92,13 @@ def plot_information_plane(
 ):
     min_epoch, max_epoch = df_data['Epoch'].min(), df_data['Epoch'].max()
 
-    epoch_spacing = np.unique(np.logspace(
+    epoch_spacing = np.logspace(
         min_epoch if min_epoch == 0 else np.log10(min_epoch), np.log10(max_epoch),
         num=300, base=10,
         dtype=int
-    ))
-    epoch_spacing = np.append(epoch_spacing, [min_epoch, max_epoch - 1])
+    )
+    epoch_spacing = np.append(epoch_spacing, [min_epoch, max_epoch])
+    epoch_spacing = np.unique(epoch_spacing)
 
     fig, ax = plt.subplots()
 

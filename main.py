@@ -130,7 +130,7 @@ def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Names
 
         information_plane.plot_information_plane(
             df_run, show_plt, block_plt=run_idx == last_run,
-            save=args.save, output_dir=output_dir, postfix=f'_{run_idx}',
+            save=args.save, output_dir=output_dir, postfix=f'_run_{run_idx}',
         )
 
 
