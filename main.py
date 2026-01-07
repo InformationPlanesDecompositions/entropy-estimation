@@ -62,6 +62,9 @@ def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Names
 
     output_dir = f'output/mi/{dir_name}'
 
+    if args.save:
+        os.makedirs(output_dir, exist_ok=True)
+
     show_plt = bool(args.show_plots)
     compute_mi = bool(args.compute_mi)
 
