@@ -34,6 +34,13 @@ def build_parser() -> argparse.ArgumentParser:
         help='Experiment run to use',
         default=0,
     )
+    ee_model_parser.add_argument(
+        '-s', '--save',
+        type=bool,
+        action=argparse.BooleanOptionalAction,
+        help='Save the generated plots',
+        default=True,
+    )
 
     # ====================
     # Mutual Information Estimation

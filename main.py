@@ -141,6 +141,16 @@ def _compare_entropy(parser: argparse.ArgumentParser, args: argparse.Namespace):
 
     if not path.isdir(data_dir):
         parser.error(f'Please provide an existing directory, did not find {data_dir}')
+    
+    prefix, dir_name = path.split(path.dirname(data_dir) if path.basename(data_dir) == '' else data_dir)
+
+    if (prefix := path.basename(prefix)) != 'output':
+        dir_name = path.join(prefix, dir_name)
+
+    output_dir = f'output/mi/comparisons/{dir_name}'
+
+    if args.save:
+        os.makedirs(output_dir, exist_ok=True)
 
     activation_path = path.join(data_dir, 'activations.h5')
 
@@ -165,8 +175,10 @@ def _compare_entropy(parser: argparse.ArgumentParser, args: argparse.Namespace):
 
         for _, layer_data in epoch_data.items():
             layer_idx = layer_data.attrs['layer_idx']
+
             if not layer_data.attrs['is_packed']:
                 continue
+
             data['Epoch'].append(epoch_idx)
             data['Layer'].append(layer_idx)
 
@@ -189,29 +201,32 @@ def _compare_entropy(parser: argparse.ArgumentParser, args: argparse.Namespace):
 
             data['HT'].append(h_t)
             data['HShuffle'].append(h_t_shuffle)
-            data['HNeurons'].append(h_neurons.sum())
+            data['HNeurons'].append(h_neurons)
 
     df_data = pd.DataFrame.from_dict(data, orient='columns')
 
-    fig, axes = plt.subplots(2, 2, sharex=True, sharey=True)
+    fig, axes = plt.subplots(2, 2, sharex=True, sharey=True, figsize=(6, 6))
     axes = axes.ravel()
 
     for layer_idx in range(4):
-        ax = axes[layer_idx]
+        ax: matplotlib.axes.Axes = axes[layer_idx]
 
         df_layer = df_data[df_data['Layer'] == layer_idx]
-        sns.lineplot(data=df_layer, x='Epoch', y='HT', label=r'normal', ls='-', ax=ax, legend=False)
-        sns.lineplot(data=df_layer, x='Epoch', y='HShuffle', label=r'shuffled', ls=':', ax=ax, legend=False)
-        sns.lineplot(data=df_layer, x='Epoch', y='HNeurons', label=r'$\sum_\ell H(T_\ell)$', ls='--', ax=ax, legend=False)
+        sns.lineplot(data=df_layer, x='Epoch', y='HT', label=r'$\hat{H}(T_\ell)$', ls='-', ax=ax, legend=False)
+        sns.lineplot(data=df_layer, x='Epoch', y='HShuffle', label=r'Column-wise Shuffle', ls=':', ax=ax, legend=False)
+        sns.lineplot(data=df_layer, x='Epoch', y='HNeurons', label=r'Neuron-wise Entropy', ls='--', ax=ax, legend=False)
 
         ax.set_title(f'Layer {layer_idx}')
         ax.set_xlabel('Epoch')
         ax.set_ylabel(r'$H(T)$')
 
     handles, labels = axes[0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc='center right')
+    fig.legend(handles, labels, loc='upper center', ncol=3, bbox_to_anchor=(0.5, 1.0))
+    fig.tight_layout(rect=(0, 0, 1, 0.925))
 
-    plt.subplots_adjust(right=0.8)
+    if args.save:
+        plt.savefig(path.join(output_dir, f'H_Latent_Shuffle_run_{run_idx}.pdf'), dpi=300)
+
     plt.show(block=True)
 
 
