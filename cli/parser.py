@@ -147,6 +147,13 @@ def build_mi_parser(
         help='(Re-)compute the mutual information of the experiment',
         default=True,
     )
+    mi_parser.add_argument(
+        '--plot-as-pdf',
+        type=bool,
+        action=argparse.BooleanOptionalAction,
+        help='Export the generated plot as .pdf file. Otherwise, .png is used',
+        default=False,
+    )
 
     return mi_parser
 

@@ -68,6 +68,8 @@ def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Names
     show_plt = bool(args.show_plots)
     compute_mi = bool(args.compute_mi)
 
+    run_selection: None | int = args.run
+
     mi_data_path = path.join(output_dir, 'mi_data.csv')
 
     if not compute_mi:
@@ -92,8 +94,6 @@ def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Names
             activation_iter = enumerate([activation_file])
         else:
             activation_iter = activation_file.items()
-
-        run_selection: None | int = args.run
 
         dfs: list[pd.DataFrame] = []
 
@@ -122,8 +122,8 @@ def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Names
     if not show_plt and not args.save:
         return
     
-    run_indices = df_data['Run'].unique()
-    last_run = df_data['Run'].max()
+    run_indices = df_data['Run'].unique() if run_selection is None else [run_selection]
+    last_run = df_data['Run'].max() if run_selection is None else run_selection
 
     for run_idx in run_indices:
         df_run = df_data[df_data['Run'] == run_idx]
@@ -131,6 +131,7 @@ def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Names
         information_plane.plot_information_plane(
             df_run, show_plt, block_plt=run_idx == last_run,
             save=args.save, output_dir=output_dir, postfix=f'_run_{run_idx}',
+            as_pdf=args.plot_as_pdf,
         )
 
 

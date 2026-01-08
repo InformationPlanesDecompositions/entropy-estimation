@@ -89,25 +89,28 @@ def plot_information_plane(
     save: bool = True,
     output_dir: str = '',
     postfix: str = '',
+    as_pdf: bool = False,
 ):
     min_epoch, max_epoch = df_data['Epoch'].min(), df_data['Epoch'].max()
 
-    epoch_spacing = np.logspace(
-        min_epoch if min_epoch == 0 else np.log10(min_epoch), np.log10(max_epoch),
-        num=300, base=10,
-        dtype=int
-    )
-    epoch_spacing = np.append(epoch_spacing, [min_epoch, max_epoch])
-    epoch_spacing = np.unique(epoch_spacing)
+    # epoch_spacing = np.logspace(
+    #     min_epoch if min_epoch == 0 else np.log10(min_epoch), np.log10(max_epoch),
+    #     num=300, base=10,
+    #     dtype=int
+    # )
+    # epoch_spacing = np.append(epoch_spacing, [min_epoch, max_epoch])
+    # epoch_spacing = np.unique(epoch_spacing)
 
-    fig, ax = plt.subplots()
+    # df_data = df_data[df_data['Epoch'].isin(epoch_spacing)]
+
+    fig, ax = plt.subplots(figsize=(6, 4.8))
 
     norm = matplotlib.colors.Normalize(min_epoch, max_epoch)
     cmap = plt.cm.ScalarMappable(norm=norm, cmap='flare_r')
     cmap.set_array([])
 
     sct_ax = sns.scatterplot(
-        data=df_data[df_data['Epoch'].isin(epoch_spacing)],
+        data=df_data,
         x='MI_x', y='MI_y',
         hue='Epoch', style='Layer', palette='flare_r', alpha=0.75,
         ax=ax,
@@ -119,14 +122,19 @@ def plot_information_plane(
     if (lg := ax.get_legend()) is not None:
         lg.remove()
         
-    ax.figure.colorbar(cmap, ax=sct_ax)
-
-    fig.tight_layout()
+    cbar = ax.figure.colorbar(cmap, ax=sct_ax)
+    cbar.ax.set_xlabel('Epoch')
 
     if save:
-        plt.savefig(path.join(output_dir, f'information_plane{postfix}.png'))
+        plt.savefig(
+            path.join(output_dir, f'information_plane{postfix}.{"pdf" if as_pdf else "png"}'),
+            dpi=300,
+            bbox_inches='tight',
+        )
 
     if show_plt:
+        fig.tight_layout()
+
         plt.show(block=block_plt)
     else:
         plt.close()
