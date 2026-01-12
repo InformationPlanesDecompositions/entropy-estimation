@@ -137,6 +137,8 @@ def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Names
 
 # TODO: Move to package evaluation, either into plug_in.py or model.py
 def _compare_entropy(parser: argparse.ArgumentParser, args: argparse.Namespace):
+    from estimators import plug_in
+
     data_dir = args.data
 
     if not path.isdir(data_dir):
@@ -185,19 +187,16 @@ def _compare_entropy(parser: argparse.ArgumentParser, args: argparse.Namespace):
             t = np.unpackbits(layer_data[:])
             t = t.reshape(-1, *layer_data.attrs['shape'])
 
-            n, dim = t.shape
+            _, dim = t.shape
 
             t_int = t.dot(1 << np.arange(dim - 1, -1, -1))
-            p_t = np.bincount(t_int) / n
-            h_t = -np.sum(p_t * np.log2(p_t + 1e-12), where=~np.isclose(p_t, 0))
+            h_t = plug_in.estimate_entropy(t_int, use_fast_estimate=True)
 
             t_shuffle = np.apply_along_axis(rng.permutation, 0, t)
             t_shuffle_int = t_shuffle.dot(1 << np.arange(dim - 1, -1, -1))
-            p_shuffle = np.bincount(t_shuffle_int) / n
-            h_t_shuffle = -np.sum(p_shuffle * np.log2(p_shuffle + 1e-12), where=~np.isclose(p_shuffle, 0))
+            h_t_shuffle = plug_in.estimate_entropy(t_shuffle_int, use_fast_estimate=True)
 
-            p_neurons = np.apply_along_axis(np.bincount, 1, t.T) / n
-            h_neurons = -np.sum(p_neurons * np.log2(p_neurons + 1e-12), where=~np.isclose(p_neurons, 0))
+            h_neurons = np.apply_along_axis(plug_in.estimate_entropy, 1, t.T, use_fast_estimate=True).sum()
 
             data['HT'].append(h_t)
             data['HShuffle'].append(h_t_shuffle)
