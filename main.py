@@ -277,8 +277,8 @@ def _compare_experiments(parser: argparse.ArgumentParser, args: argparse.Namespa
             df = df_metrics[(df_metrics['Experiment'] == exp_name) & (df_metrics['Run'] == run_idx)]
 
             if plt_type == 'Loss':
-                sns.lineplot(df, x='Epoch', y='Train Loss', ax=ax, label='Train', alpha=0.75)
-                sns.lineplot(df, x='Epoch', y='Val. Loss', ax=ax, label='Validation', ls=':', alpha=0.75)
+                sns.lineplot(df, x='Epoch', y='Train Loss', ax=ax, label='Train', alpha=0.75, legend=False)
+                sns.lineplot(df, x='Epoch', y='Val. Loss', ax=ax, label='Validation', ls=':', alpha=0.75, legend=False)
             else:
                 sns.lineplot(df, x='Epoch', y='Val. Acc', ax=ax)
 
@@ -288,7 +288,12 @@ def _compare_experiments(parser: argparse.ArgumentParser, args: argparse.Namespa
             ax.set_xlabel('Epoch')
             ax.set_ylabel(plt_type)
 
-        fig.tight_layout()
+        if plt_type == 'Loss':
+            handles, labels = axes[0].get_legend_handles_labels()
+            fig.legend(handles, labels, loc='upper center', ncol=2, bbox_to_anchor=(0.5, 1.0))
+            fig.tight_layout(rect=(0, 0, 1, 0.925))
+        else:
+            fig.tight_layout()
     
     plt.show(block=True)
 
