@@ -241,13 +241,19 @@ def _compare_experiments(parser: argparse.ArgumentParser, args: argparse.Namespa
 
     n_exp = len(experiments)
 
-    if n_exp > 4:
-        print(f'WARNING: {n_exp} experiments were provided, only 4 are supported and will be plotted')
-        experiments = dict(itertools.islice(experiments.items(), 4))
-    elif n_exp < 4:
+    n_rows: int
+    n_cols: int
+    n_rows, n_cols = args.plot_layout
+
+    max_n_exp = n_rows * n_cols
+
+    if n_exp > max_n_exp:
+        print(f'WARNING: {n_exp} experiments were provided, only {max_n_exp} are supported and will be plotted')
+        experiments = dict(itertools.islice(experiments.items(), max_n_exp))
+    elif n_exp < max_n_exp:
         print(f'INFO: Program is designed for 4 plots, but only {n_exp} experiments were provided')
 
-    n_exp = min(n_exp, 4)
+    n_exp = min(n_exp, max_n_exp)
 
     dir_exp = args.dir_experiments
     dir_mi = args.dir_mi
@@ -278,30 +284,32 @@ def _compare_experiments(parser: argparse.ArgumentParser, args: argparse.Namespa
     df_metrics = pd.concat(dfs_metrics, ignore_index=True)
     df_mis = pd.concat(dfs_mis, ignore_index=True)
 
+    figsize = (5 * n_cols / n_rows, 5 * n_rows / n_cols)
+
     # --------------------
     # Plot information planes
     # --------------------
 
-    fig, axes = plt.subplots(2, 2, sharex=True, sharey=False, figsize=(6.4 * 1.5, 4.8 * 1.5))
+    fig, axes = plt.subplots(n_rows, n_cols, sharex=True, sharey=True, figsize=figsize)
     axes = axes.ravel()
 
     norm = matplotlib.colors.Normalize(df_mis['Epoch'].min(), df_mis['Epoch'].max())
     cmap = plt.cm.ScalarMappable(norm=norm, cmap='flare_r')
     cmap.set_array([])
 
-    epoch_spacing = np.unique(np.logspace(
-        0, np.log10(3000),
-        num=300, base=10,
-        dtype=int
-    ))
-    epoch_spacing = np.append(epoch_spacing, [0, 2999])
+    # epoch_spacing = np.unique(np.logspace(
+    #     0, np.log10(3000),
+    #     num=300, base=10,
+    #     dtype=int
+    # ))
+    # epoch_spacing = np.append(epoch_spacing, [0, 2999])
 
     for idx, exp_name in enumerate(experiments.values()):
         ax: matplotlib.axes.Axes = axes[idx]
 
         df = df_mis[(df_mis['Experiment'] == exp_name) & (df_mis['Run'] == run_idx)]
 
-        df = df[df['Epoch'].isin(epoch_spacing)]
+        # df = df[df['Epoch'].isin(epoch_spacing)]
 
         sns.scatterplot(
             data=df, x='MI_x', y='MI_y',
@@ -317,8 +325,11 @@ def _compare_experiments(parser: argparse.ArgumentParser, args: argparse.Namespa
         ax.set_xlabel(r'$I(X;T_\ell)$')
         ax.set_ylabel(r'$I(T_\ell;Y)$')
 
-    fig.colorbar(cmap, ax=axes[1::2])
-    fig.subplots_adjust(right=0.8)
+
+    cbar = fig.colorbar(cmap, ax=axes[n_cols - 1::n_cols])
+    cbar.ax.set_xlabel('Epoch')
+    fig.subplots_adjust(right=0.85)
+    fig.tight_layout(rect=[0, 0, 0.85, 1])
     
     # --------------------
     # Plot metrics
@@ -328,7 +339,7 @@ def _compare_experiments(parser: argparse.ArgumentParser, args: argparse.Namespa
         if not show_plt:
             continue
 
-        fig, axes = plt.subplots(2, 2, sharex=True, sharey=plt_type == 'Accuracy', figsize=(6.4 * 1.5, 4.8 * 1.5))
+        fig, axes = plt.subplots(n_rows, n_cols, sharex=True, sharey=plt_type == 'Accuracy', figsize=figsize)
         axes = axes.ravel()
 
         for idx, exp_name in enumerate(experiments.values()):

@@ -94,6 +94,15 @@ def build_parser() -> argparse.ArgumentParser:
         help='Plot training and validation loss over epochs',
         required=False,
     )
+    comparison_parser.add_argument(
+        '--plot-layout',
+        type=int,
+        nargs=2,
+        help='Layout of the plots as (n_rows, n_cols)',
+        required=False,
+        default=(3, 3),
+        metavar=('n_rows', 'n_cols')
+    )
 
     return root_parser
 
