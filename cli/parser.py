@@ -9,7 +9,7 @@ def build_parser() -> argparse.ArgumentParser:
     # ====================
     # Entropy Evaluation
     # ====================
-    eval_parser = subparsers.add_parser('evaluate')
+    eval_parser = subparsers.add_parser('evaluate', description='Evaluate the plug-in entropy estimator')
     eval_parser_group = eval_parser.add_subparsers(dest='eval_target', required=True)
 
     # --------------------

@@ -1,14 +1,15 @@
+from collections import defaultdict
 from os import path
 
 import seaborn as sns
 import matplotlib.axes
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
+from tqdm import tqdm
+import h5py
 
 import pandas as pd
 import numpy as np
-
-from collections import defaultdict
 
 from distributions import bernoulli
 from corrections import mm
@@ -156,5 +157,81 @@ def evaluate_plugin_estimate(
     if save:
         fig.savefig(f'{plot_prefix}_entropy.pdf')
         fig_var.savefig(f'{plot_prefix}_variance.pdf')
+
+    plt.show(block=True)
+
+
+def evaluate_entropy_subaddivity(
+    activation_data: h5py.Group | h5py.Dataset,
+    output_dir: str,
+    file_postfix: str = '',
+    save: bool = False,
+):
+    data = defaultdict(list)
+    rng = np.random.default_rng(2620)
+
+    if file_postfix != '' and not file_postfix.startswith('_'):
+        file_postfix = '_' + file_postfix
+
+    for epoch_data in tqdm(activation_data.values(), ncols=100, ascii=True):  # type: ignore
+        epoch_data: h5py.Group
+        epoch_idx = epoch_data.attrs['epoch_idx']
+
+        for _, layer_data in epoch_data.items():
+            layer_idx = layer_data.attrs['layer_idx']
+
+            if not layer_data.attrs['is_packed']:
+                continue
+
+            data['Epoch'].append(epoch_idx)
+            data['Layer'].append(layer_idx)
+
+            t = np.unpackbits(layer_data[:])
+            t = t.reshape(-1, *layer_data.attrs['shape'])
+
+            _, dim = t.shape
+
+            t_int = t.dot(1 << np.arange(dim - 1, -1, -1))
+            h_t = plug_in.estimate_entropy(t_int, use_fast_estimate=True)
+
+            t_shuffle = np.apply_along_axis(rng.permutation, 0, t)
+            t_shuffle_int = t_shuffle.dot(1 << np.arange(dim - 1, -1, -1))
+            h_t_shuffle = plug_in.estimate_entropy(t_shuffle_int, use_fast_estimate=True)
+
+            # t_full_shuffle = rng.permutation(t.ravel()).reshape(t.shape)
+            # t_full_int = t_full_shuffle.dot(1 << np.arange(dim - 1, -1, -1))
+            # h_full = plug_in.estimate_entropy(t_full_int, use_fast_estimate=True)
+
+            h_neurons = np.apply_along_axis(plug_in.estimate_entropy, 1, t.T, use_fast_estimate=True).sum()
+
+            data['HT'].append(h_t)
+            data['HShuffle'].append(h_t_shuffle)
+            # data['HFull'].append(h_full)
+            data['HNeurons'].append(h_neurons)
+
+    df_data = pd.DataFrame.from_dict(data, orient='columns')
+
+    fig, axes = plt.subplots(2, 2, sharex=True, sharey=True, figsize=(6, 6))
+    axes = axes.ravel()
+
+    for layer_idx in range(4):
+        ax: matplotlib.axes.Axes = axes[layer_idx]
+
+        df_layer = df_data[df_data['Layer'] == layer_idx]
+        sns.lineplot(data=df_layer, x='Epoch', y='HT', label=r'$\hat{H}(T_\ell)$', ls='-', ax=ax, legend=False)
+        sns.lineplot(data=df_layer, x='Epoch', y='HShuffle', label=r'Column-wise Shuffle', ls=':', ax=ax, legend=False)
+        # sns.lineplot(data=df_layer, x='Epoch', y='HFull', label=r'Full Shuffle', ls=':', ax=ax, legend=False)
+        sns.lineplot(data=df_layer, x='Epoch', y='HNeurons', label=r'Neuron-wise Entropy', ls='--', ax=ax, legend=False)
+
+        ax.set_title(f'Layer {layer_idx}')
+        ax.set_xlabel('Epoch')
+        ax.set_ylabel(r'$H(T)$')
+
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc='upper center', ncol=3, bbox_to_anchor=(0.5, 1.0))
+    fig.tight_layout(rect=(0, 0, 1, 0.925))
+
+    if save:
+        plt.savefig(path.join(output_dir, f'Entropy_Subaddivity{file_postfix}.pdf'), dpi=300)
 
     plt.show(block=True)

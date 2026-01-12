@@ -17,8 +17,6 @@ import pandas as pd
 
 import h5py
 
-from tqdm import tqdm
-
 import cli.parser
 import cli.configure
 
@@ -46,6 +44,41 @@ def _perform_evaluation(parser: argparse.ArgumentParser, args: argparse.Namespac
     evaluation.plug_in.evaluate_plugin_estimate(
         n_experiments, n_samples, max_d,
         use_existing, save, output_dir
+    )
+
+
+def _evaluate_subaddivity(parser: argparse.ArgumentParser, args: argparse.Namespace):
+    data_dir = args.data
+
+    if not path.isdir(data_dir):
+        parser.error(f'Please provide an existing directory, did not find {data_dir}')
+    
+    dir_name = path.basename(path.dirname(data_dir) if path.basename(data_dir) == '' else data_dir)
+
+    output_dir = f'output/ee/'
+
+    if args.save:
+        os.makedirs(output_dir, exist_ok=True)
+
+    activation_path = path.join(data_dir, 'activations.h5')
+
+    if not (path.exists(activation_path) and path.isfile(activation_path)):
+        parser.error(f'No <activations.h5> found in given directory')
+
+    activation_file = h5py.File(activation_path, 'r')
+
+    run_idx = args.run
+
+    run_data = activation_file.get(f'run_{run_idx}', None) if activation_file.attrs['has_top_group'] else activation_file
+
+    if run_data is None:
+        parser.error(f'No run with index {run_idx} found in activation data')
+
+    evaluation.plug_in.evaluate_entropy_subaddivity(
+        run_data,  # type: ignore
+        output_dir,
+        file_postfix=f'_{dir_name}_run_{run_idx}',
+        save=args.save
     )
 
 
@@ -135,100 +168,6 @@ def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Names
         )
 
 
-# TODO: Move to package evaluation, either into plug_in.py or model.py
-def _compare_entropy(parser: argparse.ArgumentParser, args: argparse.Namespace):
-    from estimators import plug_in
-
-    data_dir = args.data
-
-    if not path.isdir(data_dir):
-        parser.error(f'Please provide an existing directory, did not find {data_dir}')
-    
-    prefix, dir_name = path.split(path.dirname(data_dir) if path.basename(data_dir) == '' else data_dir)
-
-    if (prefix := path.basename(prefix)) != 'output':
-        dir_name = path.join(prefix, dir_name)
-
-    output_dir = f'output/mi/comparisons/{dir_name}'
-
-    if args.save:
-        os.makedirs(output_dir, exist_ok=True)
-
-    activation_path = path.join(data_dir, 'activations.h5')
-
-    if not (path.exists(activation_path) and path.isfile(activation_path)):
-        parser.error(f'No <activations.h5> found in given directory')
-
-    activation_file = h5py.File(activation_path, 'r')
-
-    run_idx = args.run
-
-    data = defaultdict(list)
-    rng = np.random.default_rng(2620)
-
-    run_data = activation_file.get(f'run_{run_idx}', None) if activation_file.attrs['has_top_group'] else activation_file
-
-    if run_data is None:
-        parser.error(f'No run with index {run_idx} found in activation data')
-
-    for epoch_data in tqdm(run_data.values(), ncols=100, ascii=True):  # type: ignore
-        epoch_data: h5py.Group
-        epoch_idx = epoch_data.attrs['epoch_idx']
-
-        for _, layer_data in epoch_data.items():
-            layer_idx = layer_data.attrs['layer_idx']
-
-            if not layer_data.attrs['is_packed']:
-                continue
-
-            data['Epoch'].append(epoch_idx)
-            data['Layer'].append(layer_idx)
-
-            t = np.unpackbits(layer_data[:])
-            t = t.reshape(-1, *layer_data.attrs['shape'])
-
-            _, dim = t.shape
-
-            t_int = t.dot(1 << np.arange(dim - 1, -1, -1))
-            h_t = plug_in.estimate_entropy(t_int, use_fast_estimate=True)
-
-            t_shuffle = np.apply_along_axis(rng.permutation, 0, t)
-            t_shuffle_int = t_shuffle.dot(1 << np.arange(dim - 1, -1, -1))
-            h_t_shuffle = plug_in.estimate_entropy(t_shuffle_int, use_fast_estimate=True)
-
-            h_neurons = np.apply_along_axis(plug_in.estimate_entropy, 1, t.T, use_fast_estimate=True).sum()
-
-            data['HT'].append(h_t)
-            data['HShuffle'].append(h_t_shuffle)
-            data['HNeurons'].append(h_neurons)
-
-    df_data = pd.DataFrame.from_dict(data, orient='columns')
-
-    fig, axes = plt.subplots(2, 2, sharex=True, sharey=True, figsize=(6, 6))
-    axes = axes.ravel()
-
-    for layer_idx in range(4):
-        ax: matplotlib.axes.Axes = axes[layer_idx]
-
-        df_layer = df_data[df_data['Layer'] == layer_idx]
-        sns.lineplot(data=df_layer, x='Epoch', y='HT', label=r'$\hat{H}(T_\ell)$', ls='-', ax=ax, legend=False)
-        sns.lineplot(data=df_layer, x='Epoch', y='HShuffle', label=r'Column-wise Shuffle', ls=':', ax=ax, legend=False)
-        sns.lineplot(data=df_layer, x='Epoch', y='HNeurons', label=r'Neuron-wise Entropy', ls='--', ax=ax, legend=False)
-
-        ax.set_title(f'Layer {layer_idx}')
-        ax.set_xlabel('Epoch')
-        ax.set_ylabel(r'$H(T)$')
-
-    handles, labels = axes[0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc='upper center', ncol=3, bbox_to_anchor=(0.5, 1.0))
-    fig.tight_layout(rect=(0, 0, 1, 0.925))
-
-    if args.save:
-        plt.savefig(path.join(output_dir, f'H_Latent_Shuffle_run_{run_idx}.pdf'), dpi=300)
-
-    plt.show(block=True)
-
-
 def _compare_experiments(parser: argparse.ArgumentParser, args: argparse.Namespace):
     config = cli.configure.read_config(args.config)
     config = config.get('comparison', config)
@@ -296,19 +235,10 @@ def _compare_experiments(parser: argparse.ArgumentParser, args: argparse.Namespa
     cmap = plt.cm.ScalarMappable(norm=norm, cmap='flare_r')
     cmap.set_array([])
 
-    # epoch_spacing = np.unique(np.logspace(
-    #     0, np.log10(3000),
-    #     num=300, base=10,
-    #     dtype=int
-    # ))
-    # epoch_spacing = np.append(epoch_spacing, [0, 2999])
-
     for idx, exp_name in enumerate(experiments.values()):
         ax: matplotlib.axes.Axes = axes[idx]
 
         df = df_mis[(df_mis['Experiment'] == exp_name) & (df_mis['Run'] == run_idx)]
-
-        # df = df[df['Epoch'].isin(epoch_spacing)]
 
         sns.scatterplot(
             data=df, x='MI_x', y='MI_y',
@@ -372,7 +302,7 @@ def main():
             if args.eval_target == 'toy':
                 _perform_evaluation(parser, args)
             else:
-                _compare_entropy(parser, args)
+                _evaluate_subaddivity(parser, args)
         case 'mi' | 'mutual-information':
             _perform_mi_estimation(parser, args)
         case 'compare':
