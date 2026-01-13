@@ -183,6 +183,13 @@ def _compare_experiments(parser: argparse.ArgumentParser, args: argparse.Namespa
     n_cols: int
     n_rows, n_cols = args.plot_layout
 
+    if n_cols > n_rows:
+        h_ratio = 1
+        w_ratio = n_cols / n_rows
+    else:
+        w_ratio = 1
+        h_ratio = n_rows / n_cols
+
     max_n_exp = n_rows * n_cols
 
     if n_exp > max_n_exp:
@@ -222,7 +229,7 @@ def _compare_experiments(parser: argparse.ArgumentParser, args: argparse.Namespa
     df_metrics = pd.concat(dfs_metrics, ignore_index=True)
     df_mis = pd.concat(dfs_mis, ignore_index=True)
 
-    figsize = (5 * n_cols / n_rows, 5 * n_rows / n_cols)
+    figsize = (5 * w_ratio, 5 * h_ratio)
 
     # --------------------
     # Plot information planes
