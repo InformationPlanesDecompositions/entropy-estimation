@@ -305,6 +305,131 @@ def _compare_experiments(parser: argparse.ArgumentParser, args: argparse.Namespa
     plt.show(block=True)
 
 
+def _compare_compression(parser: argparse.ArgumentParser, args: argparse.Namespace):
+    def err_low(col: pd.Series):
+        return col.mean() - col.min()
+
+    def err_high(col: pd.Series):
+        return col.max() - col.mean()
+
+    config = cli.configure.read_config(args.config)
+    config = config.get('comparison', config)
+
+    experiments: dict = config.get('experiments', {})
+
+    if type(experiments) != dict or len(experiments) == 0:
+        parser.error(f'Please provide a dict of experiments')
+
+    n_exp = len(experiments)
+
+    dir_exp = str(args.dir_experiments)
+    dir_mi = str(args.dir_mi)
+
+    if not path.isdir(dir_exp):
+        parser.error(f'Invalid data directory for experiments provided, could not find {dir_exp}')
+
+    if not path.isdir(dir_mi):
+        parser.error(f'Invalid data directory for MI estimates provided, could not find {dir_mi}')
+
+    layer_idx = int(args.layer_idx)
+
+    n_epochs = int(args.n_epochs)
+    agg_func: str = str(args.agg_func)
+
+    exp_name_order = {name: idx for idx, name in enumerate(experiments.values())}
+
+    df_metrics, df_mis, *_ = _concat_experiment_files(
+        experiments,
+        files=['metrics.csv', 'mi_data.csv'],
+        dirs=[dir_exp, dir_mi],
+        is_key_path=True
+    )
+
+    df = pd.merge(df_mis, df_metrics, on=['Experiment', 'Run', 'Epoch'], how='left')
+    df = df[df.apply(lambda row: row['Layer'] == layer_idx, axis=1)]
+    df = df[df['Epoch'].ge(df['Epoch'].max() - n_epochs + 1)]
+
+    df_grouped = df.groupby(by=['Experiment', 'Run'])
+    df_agg = df_grouped.aggregate({
+        'MI_x': [agg_func, err_low, err_high],
+        'Val. Acc': [agg_func, err_low, err_high]
+    }).reset_index()
+
+    cmap = sns.color_palette(n_colors=n_exp)
+    c_per_exp = {exp: cmap[idx] for idx, exp in enumerate(df_agg['Experiment'].unique())}
+
+    fig, ax = plt.subplots(figsize=(6, 4.8))
+
+    for _, row in df_agg.iterrows():
+        plt.errorbar(
+            x=row[('MI_x', agg_func)], y=row[('Val. Acc', agg_func)],
+            xerr=[[row[('MI_x', err_low.__name__)]], [row[('MI_x', err_high.__name__)]]],
+            yerr=[[row[('Val. Acc', err_low.__name__)]], [row[('Val. Acc', err_high.__name__)]]],
+            color=c_per_exp[row['Experiment'].values[0]],
+            fmt='none', capsize=5, alpha=0.5
+        )
+
+    with cmap:
+        sct_ax = sns.scatterplot(
+            data=df_agg,
+            x=('MI_x', agg_func), y=('Val. Acc', agg_func),
+            hue='Experiment', style='Experiment',
+            s=50,
+            ax=ax
+        )
+    
+    handles, labels = sct_ax.get_legend_handles_labels()
+    labels, handles = zip(*sorted(zip(labels, handles), key=lambda tup: exp_name_order[tup[0]]))
+
+    if (lg := sct_ax.get_legend()) is not None:
+        lg.remove()
+
+    ax.set_xlabel(r'$I(X;T_\ell)$')
+    ax.set_ylabel('Accuracy')
+
+    ax.grid(True, alpha=0.75, ls=':')
+
+    fig.legend(handles, labels, title='Experiment', loc='center right')
+    fig.subplots_adjust(right=0.75)
+    fig.tight_layout(rect=(0, 0, 0.75, 1))
+
+    if args.save:
+        output = str(args.output)
+
+        if not output.lower().endswith('.pdf'):
+            output += '.pdf'
+
+        os.makedirs(path.dirname(output), exist_ok=True)
+        plt.savefig(output, dpi=300, format='pdf')
+
+    plt.show(block=True)
+
+
+def _concat_experiment_files(
+    experiments: dict[str, str],
+    files: list[str] | str,
+    dirs: list[str] | str,
+    is_key_path: bool = True,
+) -> list[pd.DataFrame]:
+    if len(files) != len(dirs):
+        raise ValueError(f'Please provide equal number of files and directories, was {len(files)}--{len(dirs)}')
+
+    dfs: defaultdict[str, list[pd.DataFrame]] = defaultdict(list)
+    
+    for exp_path, exp_name in experiments.items():
+        if not is_key_path:
+            exp_path, exp_name = exp_name, exp_path
+
+        for d, f in zip(dirs, files):
+            df = pd.read_csv(path.join(d, exp_path, f), sep=';', decimal=',')
+
+            df['Experiment'] = exp_name
+
+            dfs[f].append(df)
+
+    return [pd.concat(df_list, ignore_index=True) for df_list in dfs.values()]
+
+
 def main():
     parser = cli.parser.build_parser()
     args = parser.parse_args()
@@ -318,7 +443,10 @@ def main():
         case 'mi' | 'mutual-information':
             _perform_mi_estimation(parser, args)
         case 'compare':
-            _compare_experiments(parser, args)
+            if args.comparison_target in ['ip', 'information_plane']:
+                _compare_experiments(parser, args)
+            else:
+                _compare_compression(parser, args)
 
 
 if __name__ == '__main__':

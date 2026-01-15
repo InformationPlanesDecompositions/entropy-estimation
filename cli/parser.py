@@ -51,50 +51,61 @@ def build_parser() -> argparse.ArgumentParser:
     # ====================
     # Compare experiments
     # ====================
-    comparison_parser = subparsers.add_parser('compare', description='Compare experiments based on their information plane, losses, and accuracy')
-    comparison_parser.add_argument(
+    comparison_parser = subparsers.add_parser('compare', description='Compare experiments based on their MI estimates')
+    comparison_parser_group = comparison_parser.add_subparsers(dest='comparison_target', required=True)
+
+    comparison_parent_parser = argparse.ArgumentParser(add_help=False)
+    comparison_parent_parser.add_argument(
         '-c', '--config',
         type=str,
         help='Path to configuration .yaml file for comparison',
         required=True,
     )
 
-    comparison_parser.add_argument(
+    comparison_parent_parser.add_argument(
         '--dir-mi',
         type=str,
         help='Path to directory containing MI data subdirectories',
         default='./output/mi'
     )
-    comparison_parser.add_argument(
+    comparison_parent_parser.add_argument(
         '--dir-experiments',
         type=str,
         help='Path to directory containing the experimental data',
         required=True,
     )
 
-    comparison_parser.add_argument(
+    # --------------------
+    # Information Plane
+    # --------------------
+    comparison_ip_parser = comparison_parser_group.add_parser(
+        name='ip',
+        aliases=['information-plane'],
+        description='Compare the experiments on their information plane (optionally also in accuracy and loss)',
+        parents=[comparison_parent_parser],
+    )
+    comparison_ip_parser.add_argument(
         '-r', '--run',
         type=int,
         help='Run number (positive integer)',
         default=0,
         required=False,
     )
-    
-    comparison_parser.add_argument(
+    comparison_ip_parser.add_argument(
         '--accuracy-plot',
         type=bool,
         action=argparse.BooleanOptionalAction,
         help='Plot validation accuracy over epochs',
         required=False,
     )
-    comparison_parser.add_argument(
+    comparison_ip_parser.add_argument(
         '--loss-plot',
         type=bool,
         action=argparse.BooleanOptionalAction,
         help='Plot training and validation loss over epochs',
         required=False,
     )
-    comparison_parser.add_argument(
+    comparison_ip_parser.add_argument(
         '--plot-layout',
         type=int,
         nargs=2,
@@ -102,6 +113,56 @@ def build_parser() -> argparse.ArgumentParser:
         required=False,
         default=(3, 3),
         metavar=('n_rows', 'n_cols')
+    )
+
+    # --------------------
+    # Compression
+    # --------------------
+    comparison_compression_parser = comparison_parser_group.add_parser(
+        name='compression',
+        description='Compare the experiments on their compression in one layer w.r.t. validation accuracy',
+        parents=[comparison_parent_parser],
+    )
+    comparison_compression_parser.add_argument(
+        '-l', '--layer-idx',
+        type=int,
+        required=True,
+        help='The layer idx to show the compression on',
+    )
+    comparison_compression_parser.add_argument(
+        '-n', '--n-epochs',
+        type=int,
+        default=50,
+        help='How many of the last epochs should be considered for aggregation',
+    )
+    comparison_compression_parser.add_argument(
+        '--agg-func',
+        type=str,
+        choices=['mean', 'median'],
+        default='mean',
+        required=False,
+        help='Which aggregation function to use for plotting a point per experiment run'
+    )
+    comparison_compression_parser.add_argument(
+        '-s', '--save',
+        type=bool,
+        action=argparse.BooleanOptionalAction,
+        help='Save the generated plot',
+        default=True,
+    )
+    comparison_compression_parser.add_argument(
+        '-o', '--output',
+        type=str,
+        help='Path/name of the target file for the generated plot',
+        required=False,
+        default='output/mi/compression/tmp.pdf'
+    )
+    comparison_compression_parser.add_argument(
+        '--show-plots',
+        type=bool,
+        action=argparse.BooleanOptionalAction,
+        help='Display the plot',
+        default=True,
     )
 
     return root_parser
