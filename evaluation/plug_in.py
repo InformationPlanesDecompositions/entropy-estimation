@@ -173,6 +173,8 @@ def evaluate_entropy_subaddivity(
     if file_postfix != '' and not file_postfix.startswith('_'):
         file_postfix = '_' + file_postfix
 
+    layer_widths = dict()
+
     for epoch_data in tqdm(activation_data.values(), ncols=100, ascii=True):  # type: ignore
         epoch_data: h5py.Group
         epoch_idx = epoch_data.attrs['epoch_idx']
@@ -191,6 +193,9 @@ def evaluate_entropy_subaddivity(
 
             _, dim = t.shape
 
+            if layer_idx not in layer_widths.keys():
+                layer_widths[layer_idx] = dim
+
             t_int = t.dot(1 << np.arange(dim - 1, -1, -1))
             h_t = plug_in.estimate_entropy(t_int, use_fast_estimate=True)
 
@@ -198,15 +203,11 @@ def evaluate_entropy_subaddivity(
             t_shuffle_int = t_shuffle.dot(1 << np.arange(dim - 1, -1, -1))
             h_t_shuffle = plug_in.estimate_entropy(t_shuffle_int, use_fast_estimate=True)
 
-            # t_full_shuffle = rng.permutation(t.ravel()).reshape(t.shape)
-            # t_full_int = t_full_shuffle.dot(1 << np.arange(dim - 1, -1, -1))
-            # h_full = plug_in.estimate_entropy(t_full_int, use_fast_estimate=True)
-
-            h_neurons = np.apply_along_axis(plug_in.estimate_entropy, 1, t.T, use_fast_estimate=True).sum()
+            ps_hat = t.mean(axis=0)
+            h_neurons = -np.sum(ps_hat * np.log2(ps_hat) + (1 - ps_hat) * np.log2(1 - ps_hat))
 
             data['HT'].append(h_t)
             data['HShuffle'].append(h_t_shuffle)
-            # data['HFull'].append(h_full)
             data['HNeurons'].append(h_neurons)
 
     df_data = pd.DataFrame.from_dict(data, orient='columns')
@@ -219,11 +220,10 @@ def evaluate_entropy_subaddivity(
 
         df_layer = df_data[df_data['Layer'] == layer_idx]
         sns.lineplot(data=df_layer, x='Epoch', y='HT', label=r'$\hat{H}(T_\ell)$', ls='-', ax=ax, legend=False)
-        sns.lineplot(data=df_layer, x='Epoch', y='HShuffle', label=r'Column-wise Shuffle', ls=':', ax=ax, legend=False)
-        # sns.lineplot(data=df_layer, x='Epoch', y='HFull', label=r'Full Shuffle', ls=':', ax=ax, legend=False)
-        sns.lineplot(data=df_layer, x='Epoch', y='HNeurons', label=r'Neuron-wise Entropy', ls='--', ax=ax, legend=False)
+        sns.lineplot(data=df_layer, x='Epoch', y='HShuffle', label=r'$\hat{H}(T_\ell^\text{shuffle})$', ls=':', alpha=0.75, ax=ax, legend=False)
+        sns.lineplot(data=df_layer, x='Epoch', y='HNeurons', label=r'$\sum_i \hat{H}(T_{\ell, i})$', ls='--', alpha=0.75, ax=ax, legend=False)
 
-        ax.set_title(f'Layer {layer_idx}')
+        ax.set_title(rf'$d_\ell = {layer_widths[layer_idx]}$')
         ax.set_xlabel('Epoch')
         ax.set_ylabel(r'$H(T)$')
 
@@ -232,6 +232,6 @@ def evaluate_entropy_subaddivity(
     fig.tight_layout(rect=(0, 0, 1, 0.925))
 
     if save:
-        plt.savefig(path.join(output_dir, f'Entropy_Subaddivity{file_postfix}.pdf'), dpi=300)
+        plt.savefig(path.join(output_dir, f'Entropy_Subadditivity{file_postfix}.pdf'), dpi=300)
 
     plt.show(block=True)
