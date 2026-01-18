@@ -161,7 +161,7 @@ def evaluate_plugin_estimate(
     plt.show(block=True)
 
 
-def evaluate_entropy_subaddivity(
+def evaluate_entropy_subadditivity(
     activation_data: h5py.Group | h5py.Dataset,
     output_dir: str,
     file_postfix: str = '',

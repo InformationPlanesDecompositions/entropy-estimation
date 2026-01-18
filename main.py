@@ -47,7 +47,7 @@ def _perform_evaluation(parser: argparse.ArgumentParser, args: argparse.Namespac
     )
 
 
-def _evaluate_subaddivity(parser: argparse.ArgumentParser, args: argparse.Namespace):
+def _evaluate_subadditivity(parser: argparse.ArgumentParser, args: argparse.Namespace):
     data_dir = args.data
 
     if not path.isdir(data_dir):
@@ -74,7 +74,7 @@ def _evaluate_subaddivity(parser: argparse.ArgumentParser, args: argparse.Namesp
     if run_data is None:
         parser.error(f'No run with index {run_idx} found in activation data')
 
-    evaluation.plug_in.evaluate_entropy_subaddivity(
+    evaluation.plug_in.evaluate_entropy_subadditivity(
         run_data,  # type: ignore
         output_dir,
         file_postfix=f'_{dir_name}_run_{run_idx}',
@@ -439,7 +439,7 @@ def main():
             if args.eval_target == 'toy':
                 _perform_evaluation(parser, args)
             else:
-                _evaluate_subaddivity(parser, args)
+                _evaluate_subadditivity(parser, args)
         case 'mi' | 'mutual-information':
             _perform_mi_estimation(parser, args)
         case 'compare':
