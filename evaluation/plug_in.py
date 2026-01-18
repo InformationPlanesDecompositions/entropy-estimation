@@ -180,7 +180,7 @@ def evaluate_entropy_subaddivity(
         epoch_idx = epoch_data.attrs['epoch_idx']
 
         for _, layer_data in epoch_data.items():
-            layer_idx = layer_data.attrs['layer_idx']
+            layer_idx = int(layer_data.attrs['layer_idx'])
 
             if not layer_data.attrs['is_packed']:
                 continue
@@ -215,8 +215,11 @@ def evaluate_entropy_subaddivity(
     fig, axes = plt.subplots(2, 2, sharex=True, sharey=True, figsize=(6, 6))
     axes = axes.ravel()
 
-    for layer_idx in range(4):
-        ax: matplotlib.axes.Axes = axes[layer_idx]
+    for idx, layer_idx in enumerate(sorted(layer_widths.keys())):
+        if idx > len(axes):
+            break
+
+        ax: matplotlib.axes.Axes = axes[idx]
 
         df_layer = df_data[df_data['Layer'] == layer_idx]
         sns.lineplot(data=df_layer, x='Epoch', y='HT', label=r'$\hat{H}(T_\ell)$', ls='-', ax=ax, legend=False)
