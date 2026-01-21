@@ -124,10 +124,10 @@ def build_parser() -> argparse.ArgumentParser:
         parents=[comparison_parent_parser],
     )
     comparison_compression_parser.add_argument(
-        '-l', '--layer-idx',
+        '-l', '--layer-offset-idx',
         type=int,
         required=True,
-        help='The layer idx to show the compression on',
+        help='The layer idx, offset from the output layer, to show the compression on. i.e., <-1> means the layer *before* the output layer',
     )
     comparison_compression_parser.add_argument(
         '-n', '--n-epochs',
@@ -142,6 +142,20 @@ def build_parser() -> argparse.ArgumentParser:
         default='mean',
         required=False,
         help='Which aggregation function to use for plotting a point per experiment run'
+    )
+    comparison_compression_parser.add_argument(
+        '--exp-as-cbar',
+        type=bool,
+        required=False,
+        default=False,
+        action=argparse.BooleanOptionalAction,
+        help='Should the experiment column be displayed as a cbar (alternatively: as legend)',
+    )
+    comparison_compression_parser.add_argument(
+        '--legend-title',
+        type=str,
+        required=False,
+        default='Experiment',
     )
     comparison_compression_parser.add_argument(
         '-s', '--save',

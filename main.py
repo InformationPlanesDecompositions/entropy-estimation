@@ -196,7 +196,7 @@ def _compare_experiments(parser: argparse.ArgumentParser, args: argparse.Namespa
         print(f'WARNING: {n_exp} experiments were provided, only {max_n_exp} are supported and will be plotted')
         experiments = dict(itertools.islice(experiments.items(), max_n_exp))
     elif n_exp < max_n_exp:
-        print(f'INFO: Program is designed for 4 plots, but only {n_exp} experiments were provided')
+        print(f'INFO: Program is designed for {max_n_exp} plots, but only {n_exp} experiments were provided')
 
     n_exp = min(n_exp, max_n_exp)
 
@@ -331,12 +331,15 @@ def _compare_compression(parser: argparse.ArgumentParser, args: argparse.Namespa
     if not path.isdir(dir_mi):
         parser.error(f'Invalid data directory for MI estimates provided, could not find {dir_mi}')
 
-    layer_idx = int(args.layer_idx)
+    layer_revoffset_idx = int(args.layer_offset_idx)
+    if layer_revoffset_idx > 0:
+        layer_revoffset_idx *= -1
 
     n_epochs = int(args.n_epochs)
     agg_func: str = str(args.agg_func)
 
-    exp_name_order = {name: idx for idx, name in enumerate(experiments.values())}
+    exp_as_cbar: bool = bool(args.exp_as_cbar)
+    legend_title: str = str(args.legend_title)
 
     df_metrics, df_mis, *_ = _concat_experiment_files(
         experiments,
@@ -346,7 +349,11 @@ def _compare_compression(parser: argparse.ArgumentParser, args: argparse.Namespa
     )
 
     df = pd.merge(df_mis, df_metrics, on=['Experiment', 'Run', 'Epoch'], how='left')
-    df = df[df.apply(lambda row: row['Layer'] == layer_idx, axis=1)]
+
+    max_layer_indices = df.groupby(by='Experiment')['Layer'].max()
+    df['Layer_RevOffset'] = df.apply(lambda row: row['Layer'] - max_layer_indices[row['Experiment']], axis=1)
+
+    df = df[df.apply(lambda row: row['Layer_RevOffset'] == layer_revoffset_idx, axis=1)]
     df = df[df['Epoch'].ge(df['Epoch'].max() - n_epochs + 1)]
 
     df_grouped = df.groupby(by=['Experiment', 'Run'])
@@ -355,10 +362,22 @@ def _compare_compression(parser: argparse.ArgumentParser, args: argparse.Namespa
         'Val. Acc': [agg_func, err_low, err_high]
     }).reset_index()
 
-    cmap = sns.color_palette(n_colors=n_exp)
-    c_per_exp = {exp: cmap[idx] for idx, exp in enumerate(df_agg['Experiment'].unique())}
-
     fig, ax = plt.subplots(figsize=(6, 4.8))
+
+    palette = 'plasma'
+
+    exp_name_order = {str(name): idx for idx, name in enumerate(experiments.values())}
+
+    if exp_as_cbar:
+        min_val, max_val = df['Experiment'].min(), df['Experiment'].max()
+
+        cmap = plt.cm.ScalarMappable(cmap=palette)
+        cmap.set_array([min_val, max_val])
+
+        c_per_exp = {exp: cmap.to_rgba(float(exp), norm=True) for exp in df_agg['Experiment'].unique()}  # type: ignore
+    else:
+        cmap = sns.color_palette(palette=palette, n_colors=n_exp)
+        c_per_exp = {exp: cmap[idx] for idx, exp in enumerate(df_agg['Experiment'].unique())}
 
     for _, row in df_agg.iterrows():
         plt.errorbar(
@@ -366,20 +385,21 @@ def _compare_compression(parser: argparse.ArgumentParser, args: argparse.Namespa
             xerr=[[row[('MI_x', err_low.__name__)]], [row[('MI_x', err_high.__name__)]]],
             yerr=[[row[('Val. Acc', err_low.__name__)]], [row[('Val. Acc', err_high.__name__)]]],
             color=c_per_exp[row['Experiment'].values[0]],
-            fmt='none', capsize=5, alpha=0.5
+            fmt='none', capsize=5, alpha=0.5, zorder=-1,
         )
 
-    with cmap:
-        sct_ax = sns.scatterplot(
-            data=df_agg,
-            x=('MI_x', agg_func), y=('Val. Acc', agg_func),
-            hue='Experiment', style='Experiment',
-            s=50,
-            ax=ax
-        )
+    sct_ax = sns.scatterplot(
+        data=df_agg,
+        x=('MI_x', agg_func), y=('Val. Acc', agg_func),
+        hue='Experiment', style='Experiment', palette=palette if exp_as_cbar else cmap,  # type: ignore
+        s=50,
+        ax=ax,
+        zorder=2,
+    )
     
-    handles, labels = sct_ax.get_legend_handles_labels()
-    labels, handles = zip(*sorted(zip(labels, handles), key=lambda tup: exp_name_order[tup[0]]))
+    if not exp_as_cbar:
+        handles, labels = sct_ax.get_legend_handles_labels()
+        labels, handles = zip(*sorted(zip(labels, handles), key=lambda tup: exp_name_order[str(tup[0])]))
 
     if (lg := sct_ax.get_legend()) is not None:
         lg.remove()
@@ -389,9 +409,15 @@ def _compare_compression(parser: argparse.ArgumentParser, args: argparse.Namespa
 
     ax.grid(True, alpha=0.75, ls=':')
 
-    fig.legend(handles, labels, title='Experiment', loc='center right')
-    fig.subplots_adjust(right=0.75)
-    fig.tight_layout(rect=(0, 0, 0.75, 1))
+    if exp_as_cbar:
+        cbar = ax.figure.colorbar(cmap, ax=sct_ax)  # type: ignore
+        cbar.ax.set_xlabel(legend_title)  # type: ignore
+
+        fig.tight_layout()
+    else:
+        fig.legend(handles, labels, title=legend_title, loc='center right')  # type: ignore
+        fig.subplots_adjust(right=0.75)
+        fig.tight_layout(rect=(0, 0, 0.75, 1))
 
     if args.save:
         output = str(args.output)
@@ -407,8 +433,8 @@ def _compare_compression(parser: argparse.ArgumentParser, args: argparse.Namespa
 
 def _concat_experiment_files(
     experiments: dict[str, str],
-    files: list[str] | str,
-    dirs: list[str] | str,
+    files: list[str],
+    dirs: list[str],
     is_key_path: bool = True,
 ) -> list[pd.DataFrame]:
     if len(files) != len(dirs):
