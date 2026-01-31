@@ -366,18 +366,16 @@ def _compare_compression(parser: argparse.ArgumentParser, args: argparse.Namespa
 
     palette = 'plasma'
 
-    exp_name_order = {str(name): idx for idx, name in enumerate(experiments.values())}
-
     if exp_as_cbar:
         min_val, max_val = df['Experiment'].min(), df['Experiment'].max()
 
         cmap = plt.cm.ScalarMappable(cmap=palette)
         cmap.set_array([min_val, max_val])
 
-        c_per_exp = {exp: cmap.to_rgba(float(exp), norm=True) for exp in df_agg['Experiment'].unique()}  # type: ignore
+        c_per_exp = {exp: cmap.to_rgba(float(exp), norm=True) for exp in experiments.values()}  # type: ignore
     else:
         cmap = sns.color_palette(palette=palette, n_colors=n_exp)
-        c_per_exp = {exp: cmap[idx] for idx, exp in enumerate(df_agg['Experiment'].unique())}
+        c_per_exp = {exp: cmap[idx] for idx, exp in enumerate(experiments.values())}
 
     for _, row in df_agg.iterrows():
         plt.errorbar(
@@ -391,7 +389,8 @@ def _compare_compression(parser: argparse.ArgumentParser, args: argparse.Namespa
     sct_ax = sns.scatterplot(
         data=df_agg,
         x=('MI_x', agg_func), y=('Val. Acc', agg_func),
-        hue='Experiment', style='Experiment', palette=palette if exp_as_cbar else cmap,  # type: ignore
+        hue='Experiment', style='Experiment', hue_order=experiments.values(),
+        palette=palette if exp_as_cbar else cmap,  # type: ignore
         s=50,
         ax=ax,
         zorder=2,
@@ -399,7 +398,6 @@ def _compare_compression(parser: argparse.ArgumentParser, args: argparse.Namespa
     
     if not exp_as_cbar:
         handles, labels = sct_ax.get_legend_handles_labels()
-        labels, handles = zip(*sorted(zip(labels, handles), key=lambda tup: exp_name_order[str(tup[0])]))
 
     if (lg := sct_ax.get_legend()) is not None:
         lg.remove()
@@ -415,9 +413,9 @@ def _compare_compression(parser: argparse.ArgumentParser, args: argparse.Namespa
 
         fig.tight_layout()
     else:
-        fig.legend(handles, labels, title=legend_title, loc='center right')  # type: ignore
-        fig.subplots_adjust(right=0.75)
-        fig.tight_layout(rect=(0, 0, 0.75, 1))
+        fig.legend(handles, labels, title=legend_title, loc='upper right', ncols=1)  # type: ignore
+        fig.subplots_adjust(right=0.85)
+        fig.tight_layout(rect=(0, 0, 0.85, 1))
 
     if args.save:
         output = str(args.output)
