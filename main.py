@@ -431,8 +431,72 @@ def _compare_compression(parser: argparse.ArgumentParser, args: argparse.Namespa
     plt.show(block=True)
 
 
+def _quantify_compression(parser: argparse.ArgumentParser, args: argparse.Namespace):
+    config = cli.configure.read_config(args.config)
+    config = config.get('comparison', config)
+
+    experiments: dict = config.get('experiments', {})
+
+    exp_as_cbar = bool(args.exp_as_cbar)
+    legend_title = str(args.legend_title)
+    ref = str(args.reference_func)
+    n_epochs = int(args.n_epochs)
+    dir_mi = str(args.dir_mi)
+
+    if not path.isdir(dir_mi):
+        parser.error(f'Invalid data directory for MI estimates provided, could not find {dir_mi}')
+
+    [df] = _concat_experiment_files(experiments, ['mi_data.csv'],  [dir_mi], is_key_path=True)
+
+    max_layer_indices = df.groupby(by='Experiment')['Layer'].max()
+    df['Layer'] = df.apply(lambda row: row['Layer'] - max_layer_indices[row['Experiment']], axis=1).astype(int)
+
+    df.drop(index=df[df['Layer'] == 0].index, inplace=True)
+
+    palette = 'plasma'
+
+    if ref == 'max':
+        ref_x = df.groupby(by=['Experiment', 'Run', 'Layer'])['MI_x'].max()
+    else:
+        ref_x = df[df['Epoch'] == 0].groupby(by=['Experiment', 'Run', 'Layer'])['MI_x'].min()
+    
+    end_x = df[df['Epoch'].ge(df['Epoch'].max() - n_epochs + 1)].groupby(by=['Experiment', 'Run', 'Layer']).mean()['MI_x']
+
+    df_rho = (ref_x - end_x) / ref_x
+    df_rho = df_rho.reset_index(name='Rho')
+
+    fig, ax = plt.subplots()
+
+    sns.boxplot(df_rho, x='Layer', y='Rho', fill=False, color='grey')
+    strp_ax = sns.swarmplot(
+        df_rho, x='Layer', y='Rho',
+        hue='Experiment', palette=palette, hue_order=experiments.values(),
+        ax=ax, legend=True,
+    )
+
+    strp_ax.legend().remove()
+
+    if exp_as_cbar:
+        min_val, max_val = df['Experiment'].min(), df['Experiment'].max()
+
+        cmap = plt.cm.ScalarMappable(cmap=palette)
+        cmap.set_array([min_val, max_val])
+
+        cbar = fig.colorbar(cmap, ax=strp_ax)
+        cbar.ax.set_xlabel(legend_title)
+    else:
+        handles, labels = ax.get_legend_handles_labels()
+        fig.legend(handles, labels, title=legend_title)
+    
+    ax.grid(True, axis='y', alpha=0.75, ls='--')
+
+    fig.tight_layout()
+
+    plt.show(block=True)
+
+
 def _concat_experiment_files(
-    experiments: dict[str, str],
+    experiments: dict,
     files: list[str],
     dirs: list[str],
     is_key_path: bool = True,
@@ -445,6 +509,8 @@ def _concat_experiment_files(
     for exp_path, exp_name in experiments.items():
         if not is_key_path:
             exp_path, exp_name = exp_name, exp_path
+
+        exp_path = str(exp_path)
 
         for d, f in zip(dirs, files):
             df = pd.read_csv(path.join(d, exp_path, f), sep=';', decimal=',')
@@ -471,6 +537,8 @@ def main():
         case 'compare':
             if args.comparison_target in ['ip', 'information_plane']:
                 _compare_experiments(parser, args)
+            elif args.comparison_target == 'q1':
+                _quantify_compression(parser, args)
             else:
                 _compare_compression(parser, args)
 

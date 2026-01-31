@@ -116,34 +116,39 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     # --------------------
-    # Compression
+    # Q1 (Compression)
     # --------------------
-    comparison_compression_parser = comparison_parser_group.add_parser(
-        name='compression',
-        description='Compare the experiments on their compression in one layer w.r.t. validation accuracy',
-        parents=[comparison_parent_parser],
+    comparison_q1_parser = comparison_parser_group.add_parser(
+        name='q1',
+        description='Compare the experiments on their compression factor',
     )
-    comparison_compression_parser.add_argument(
-        '-l', '--layer-offset-idx',
-        type=int,
+    comparison_q1_parser.add_argument(
+        '-c', '--config',
+        type=str,
+        help='Path to configuration .yaml file for comparison',
         required=True,
-        help='The layer idx, offset from the output layer, to show the compression on. i.e., <-1> means the layer *before* the output layer',
     )
-    comparison_compression_parser.add_argument(
+    comparison_q1_parser.add_argument(
+        '--dir-mi',
+        type=str,
+        help='Path to directory containing MI data subdirectories',
+        default='./output/mi'
+    )
+    comparison_q1_parser.add_argument(
+        '-r', '--reference_func',
+        type=str,
+        choices=['max', 'start'],
+        required=False,
+        default='start',
+        help='How to determine the reference value for the compression factor',
+    )
+    comparison_q1_parser.add_argument(
         '-n', '--n-epochs',
         type=int,
         default=50,
         help='How many of the last epochs should be considered for aggregation',
     )
-    comparison_compression_parser.add_argument(
-        '--agg-func',
-        type=str,
-        choices=['mean', 'median'],
-        default='mean',
-        required=False,
-        help='Which aggregation function to use for plotting a point per experiment run'
-    )
-    comparison_compression_parser.add_argument(
+    comparison_q1_parser.add_argument(
         '--exp-as-cbar',
         type=bool,
         required=False,
@@ -151,27 +156,70 @@ def build_parser() -> argparse.ArgumentParser:
         action=argparse.BooleanOptionalAction,
         help='Should the experiment column be displayed as a cbar (alternatively: as legend)',
     )
-    comparison_compression_parser.add_argument(
+    comparison_q1_parser.add_argument(
         '--legend-title',
         type=str,
         required=False,
         default='Experiment',
     )
-    comparison_compression_parser.add_argument(
+
+    # --------------------
+    # Q2 (Compression vs. Accuracy)
+    # --------------------
+    comparison_q2_parser = comparison_parser_group.add_parser(
+        name='q2',
+        description='Compare the experiments on their compression in one layer w.r.t. validation accuracy',
+        parents=[comparison_parent_parser],
+    )
+    comparison_q2_parser.add_argument(
+        '-l', '--layer-offset-idx',
+        type=int,
+        required=True,
+        help='The layer idx, offset from the output layer, to show the compression on. i.e., <-1> means the layer *before* the output layer',
+    )
+    comparison_q2_parser.add_argument(
+        '-n', '--n-epochs',
+        type=int,
+        default=50,
+        help='How many of the last epochs should be considered for aggregation',
+    )
+    comparison_q2_parser.add_argument(
+        '--agg-func',
+        type=str,
+        choices=['mean', 'median'],
+        default='mean',
+        required=False,
+        help='Which aggregation function to use for plotting a point per experiment run'
+    )
+    comparison_q2_parser.add_argument(
+        '--exp-as-cbar',
+        type=bool,
+        required=False,
+        default=False,
+        action=argparse.BooleanOptionalAction,
+        help='Should the experiment column be displayed as a cbar (alternatively: as legend)',
+    )
+    comparison_q2_parser.add_argument(
+        '--legend-title',
+        type=str,
+        required=False,
+        default='Experiment',
+    )
+    comparison_q2_parser.add_argument(
         '-s', '--save',
         type=bool,
         action=argparse.BooleanOptionalAction,
         help='Save the generated plot',
         default=True,
     )
-    comparison_compression_parser.add_argument(
+    comparison_q2_parser.add_argument(
         '-o', '--output',
         type=str,
         help='Path/name of the target file for the generated plot',
         required=False,
         default='output/mi/compression/tmp.pdf'
     )
-    comparison_compression_parser.add_argument(
+    comparison_q2_parser.add_argument(
         '--show-plots',
         type=bool,
         action=argparse.BooleanOptionalAction,
