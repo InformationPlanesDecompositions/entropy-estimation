@@ -261,7 +261,6 @@ def _compare_experiments(parser: argparse.ArgumentParser, args: argparse.Namespa
         ax.set_xlabel(r'$I(X;T_\ell)$')
         ax.set_ylabel(r'$I(T_\ell;Y)$')
 
-
     cbar = fig.colorbar(cmap, ax=axes[n_cols - 1::n_cols])
     cbar.ax.set_xlabel('Epoch')
     fig.subplots_adjust(right=0.85)
@@ -417,7 +416,7 @@ def _compare_compression(parser: argparse.ArgumentParser, args: argparse.Namespa
         fig.subplots_adjust(right=0.85)
         fig.tight_layout(rect=(0, 0, 0.85, 1))
 
-    if args.save:
+    if bool(args.save):
         output = str(args.output)
 
         if not output.lower().endswith('.pdf'):
@@ -426,7 +425,8 @@ def _compare_compression(parser: argparse.ArgumentParser, args: argparse.Namespa
         os.makedirs(path.dirname(output), exist_ok=True)
         plt.savefig(output, dpi=300, format='pdf')
 
-    plt.show(block=True)
+    if bool(args.show_plots):
+        plt.show(block=True)
 
 
 def _quantify_compression(parser: argparse.ArgumentParser, args: argparse.Namespace):
