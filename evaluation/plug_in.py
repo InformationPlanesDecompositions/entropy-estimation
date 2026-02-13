@@ -64,7 +64,6 @@ def evaluate_plugin_estimate(
     data_path = path.join(output_dir, f'{file_prefix}_data.csv')
     plot_prefix = path.join(output_dir, f'{file_prefix}_plot')
 
-    n_experiments = 20
     ps = [0.5, 0.7, 0.9]
 
     if use_existing_data and (path.exists(data_path) and path.isfile(data_path)):
