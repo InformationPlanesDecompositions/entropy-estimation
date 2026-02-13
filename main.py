@@ -231,15 +231,17 @@ def _compare_experiments(parser: argparse.ArgumentParser, args: argparse.Namespa
 
     figsize = (5 * w_ratio, 5 * h_ratio)
 
+    palette = 'cividis'
+
     # --------------------
     # Plot information planes
     # --------------------
 
     fig, axes = plt.subplots(n_rows, n_cols, sharex=True, sharey=True, figsize=figsize)
-    axes = axes.ravel()
+    axes = axes.ravel() if n_rows * n_cols > 1 else [axes]
 
     norm = matplotlib.colors.Normalize(df_mis['Epoch'].min(), df_mis['Epoch'].max())
-    cmap = plt.cm.ScalarMappable(norm=norm, cmap='flare_r')
+    cmap = plt.cm.ScalarMappable(norm=norm, cmap=palette)
     cmap.set_array([])
 
     for idx, exp_name in enumerate(experiments.values()):
@@ -250,7 +252,7 @@ def _compare_experiments(parser: argparse.ArgumentParser, args: argparse.Namespa
         sns.scatterplot(
             data=df, x='MI_x', y='MI_y',
             hue='Epoch', style='Layer', ax=ax,
-            palette='flare_r', alpha=0.75, s=25
+            palette=palette, linewidth=0.1, s=25,
         )
         ax.set_title(exp_name)
 
@@ -363,7 +365,7 @@ def _compare_compression(parser: argparse.ArgumentParser, args: argparse.Namespa
 
     fig, ax = plt.subplots(figsize=(6, 4.8))
 
-    palette = 'plasma'
+    palette = 'cividis'
 
     if exp_as_cbar:
         min_val, max_val = df['Experiment'].min(), df['Experiment'].max()
@@ -413,8 +415,8 @@ def _compare_compression(parser: argparse.ArgumentParser, args: argparse.Namespa
         fig.tight_layout()
     else:
         fig.legend(handles, labels, title=legend_title, loc='upper right', ncols=1)  # type: ignore
-        fig.subplots_adjust(right=0.85)
-        fig.tight_layout(rect=(0, 0, 0.85, 1))
+        fig.subplots_adjust(right=0.8)
+        fig.tight_layout(rect=(0, 0, 0.8, 1))
 
     if bool(args.save):
         output = str(args.output)

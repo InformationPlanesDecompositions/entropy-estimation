@@ -90,19 +90,20 @@ def plot_information_plane(
     output_dir: str = '',
     postfix: str = '',
     as_pdf: bool = False,
+    palette: str = 'cividis'
 ):
     min_epoch, max_epoch = df_data['Epoch'].min(), df_data['Epoch'].max()
 
     fig, ax = plt.subplots(figsize=(6, 4.8))
 
     norm = matplotlib.colors.Normalize(min_epoch, max_epoch)
-    cmap = plt.cm.ScalarMappable(norm=norm, cmap='flare_r')
+    cmap = plt.cm.ScalarMappable(norm=norm, cmap=palette)
     cmap.set_array([])
 
     sct_ax = sns.scatterplot(
         data=df_data,
         x='MI_x', y='MI_y',
-        hue='Epoch', style='Layer', palette='flare_r', alpha=0.75,
+        hue='Epoch', style='Layer', palette=palette, linewidth=0.1,
         ax=ax,
     )
 
