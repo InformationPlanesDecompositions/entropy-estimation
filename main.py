@@ -249,19 +249,11 @@ def _compare_experiments(parser: argparse.ArgumentParser, args: argparse.Namespa
 
         df = df_mis[(df_mis['Experiment'] == exp_name) & (df_mis['Run'] == run_idx)]
 
-        sns.scatterplot(
-            data=df, x='MI_x', y='MI_y',
-            hue='Epoch', style='Layer', ax=ax,
-            palette=palette, linewidth=0.1, s=25,
+        information_plane.plot_information_plane(
+            df, show_plt=False, save=False, palette=palette, cmap=cmap, ax=ax,
         )
+
         ax.set_title(exp_name)
-
-        if (lg := ax.get_legend()) is not None:
-            lg.remove()
-
-    for ax in axes:
-        ax.set_xlabel(r'$I(X;T_\ell)$')
-        ax.set_ylabel(r'$I(T_\ell;Y)$')
 
     cbar = fig.colorbar(cmap, ax=axes[n_cols - 1::n_cols])
     cbar.ax.set_xlabel('Epoch')

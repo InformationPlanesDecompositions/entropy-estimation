@@ -4,6 +4,7 @@ from os import path
 import h5py
 import matplotlib.colors
 import matplotlib.pyplot as plt
+import matplotlib.axes
 import numpy as np
 import pandas as pd
 import scipy.special
@@ -90,20 +91,25 @@ def plot_information_plane(
     output_dir: str = '',
     postfix: str = '',
     as_pdf: bool = False,
-    palette: str = 'cividis'
+    palette: str = 'cividis',
+    ax: matplotlib.axes.Axes | None = None,
+    cmap: plt.cm.ScalarMappable | None = None,
 ):
-    min_epoch, max_epoch = df_data['Epoch'].min(), df_data['Epoch'].max()
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(6, 4.8))
 
-    fig, ax = plt.subplots(figsize=(6, 4.8))
+    if cmap is None:
+        min_epoch, max_epoch = df_data['Epoch'].min(), df_data['Epoch'].max()
 
-    norm = matplotlib.colors.Normalize(min_epoch, max_epoch)
-    cmap = plt.cm.ScalarMappable(norm=norm, cmap=palette)
-    cmap.set_array([])
+        norm = matplotlib.colors.Normalize(min_epoch, max_epoch)
+        cmap = plt.cm.ScalarMappable(norm=norm, cmap=palette)
+        cmap.set_array([])
 
     sct_ax = sns.scatterplot(
         data=df_data,
         x='MI_x', y='MI_y',
-        hue='Epoch', style='Layer', palette=palette, linewidth=0.1,
+        hue='Epoch', style='Layer', palette=palette,
+        s=25, linewidth=0.1, edgecolor='#00000040',
         ax=ax,
     )
 
@@ -112,6 +118,9 @@ def plot_information_plane(
 
     if (lg := ax.get_legend()) is not None:
         lg.remove()
+
+    if (not show_plt and not save):
+        return ax
         
     cbar = ax.figure.colorbar(cmap, ax=sct_ax)
     cbar.ax.set_xlabel('Epoch')
@@ -124,11 +133,14 @@ def plot_information_plane(
         )
 
     if show_plt:
-        fig.tight_layout()
+        if ax is None:
+            fig.tight_layout()
 
         plt.show(block=block_plt)
     else:
         plt.close()
+
+    return ax
 
 
 def _estimate_output_layer_mi(latent: np.ndarray, target: np.ndarray) -> tuple[np.floating, ...]:
