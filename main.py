@@ -300,10 +300,14 @@ def _compare_experiments(parser: argparse.ArgumentParser, args: argparse.Namespa
 
 def _compare_compression(parser: argparse.ArgumentParser, args: argparse.Namespace):
     def err_low(col: pd.Series):
-        return col.mean() - col.min()
+        err = col.mean() - col.min()
+
+        return err if not np.isclose(err, 0) else 0
 
     def err_high(col: pd.Series):
-        return col.max() - col.mean()
+        err = col.max() - col.mean()
+    
+        return err if not np.isclose(err, 0) else 0
 
     config = cli.configure.read_config(args.config)
     config = config.get('comparison', config)
