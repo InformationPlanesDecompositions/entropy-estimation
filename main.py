@@ -310,9 +310,9 @@ def _compare_compression(parser: argparse.ArgumentParser, args: argparse.Namespa
         return err if not np.isclose(err, 0) else 0
 
     config = cli.configure.read_config(args.config)
-    config = config.get('comparison', config)
+    config: dict = config.get('comparison', config)
 
-    experiments: dict = config.get('experiments', {})
+    experiments = config.get('experiments', {})
 
     if type(experiments) != dict or len(experiments) == 0:
         parser.error(f'Please provide a dict of experiments')
@@ -336,6 +336,9 @@ def _compare_compression(parser: argparse.ArgumentParser, args: argparse.Namespa
     agg_func: str = str(args.agg_func)
 
     exp_as_cbar: bool = bool(args.exp_as_cbar)
+    is_categorical_cbar: bool = exp_as_cbar and bool(args.is_categorical_cbar)
+    cat_cbar_minimum: int = int(args.categorical_cbar_minimum)
+
     legend_title: str = str(args.legend_title)
 
     df_metrics, df_mis, *_ = _concat_experiment_files(
@@ -361,19 +364,20 @@ def _compare_compression(parser: argparse.ArgumentParser, args: argparse.Namespa
 
     fig, ax = plt.subplots(figsize=(6, 4.8))
 
-    palette = 'cividis'
+    palette_name = 'cividis'
+    categories = sorted(experiments.values()) if exp_as_cbar else list(experiments.values())
 
-    if exp_as_cbar:
+    if is_categorical_cbar or not exp_as_cbar:
+        palette = sns.color_palette(palette=palette_name, n_colors=n_exp)
+        c_per_exp = {exp: palette[idx] for idx, exp in enumerate(categories)}
+    else:
         min_val, max_val = df['Experiment'].min(), df['Experiment'].max()
 
-        cmap = plt.cm.ScalarMappable(cmap=palette)
-        cmap.set_array([min_val, max_val])
+        palette = plt.cm.ScalarMappable(cmap=palette_name)
+        palette.set_array([min_val, max_val])
 
-        c_per_exp = {exp: cmap.to_rgba(float(exp), norm=True) for exp in experiments.values()}  # type: ignore
-    else:
-        cmap = sns.color_palette(palette=palette, n_colors=n_exp)
-        c_per_exp = {exp: cmap[idx] for idx, exp in enumerate(experiments.values())}
-
+        c_per_exp = {exp: palette.to_rgba(float(exp), norm=True) for exp in categories}  # type: ignore
+        
     for _, row in df_agg.iterrows():
         plt.errorbar(
             x=row[('MI_x', agg_func)], y=row[('Val. Acc', agg_func)],
@@ -387,7 +391,7 @@ def _compare_compression(parser: argparse.ArgumentParser, args: argparse.Namespa
         data=df_agg,
         x=('MI_x', agg_func), y=('Val. Acc', agg_func),
         hue='Experiment', style='Experiment', hue_order=experiments.values(),
-        palette=palette if exp_as_cbar else cmap,  # type: ignore
+        palette=palette_name if exp_as_cbar else c_per_exp,  # type: ignore
         s=50,
         ax=ax,
         zorder=2,
@@ -405,8 +409,27 @@ def _compare_compression(parser: argparse.ArgumentParser, args: argparse.Namespa
     ax.grid(True, alpha=0.75, ls=':')
 
     if exp_as_cbar:
-        cbar = ax.figure.colorbar(cmap, ax=sct_ax)  # type: ignore
-        cbar.ax.set_xlabel(legend_title)  # type: ignore
+        bounds = [cat_cbar_minimum] + categories if cat_cbar_minimum not in categories else categories
+
+        if is_categorical_cbar:
+            cmap = sns.color_palette(palette=palette_name, as_cmap=True)
+            norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N, extend='neither')
+            value_array = []
+        else:
+            norm = None
+            value_array = [df['Experiment'].min(), df['Experiment'].max()]
+        
+        sm = plt.cm.ScalarMappable(norm=norm, cmap=palette_name)
+        sm.set_array(value_array)
+
+        cbar = ax.figure.colorbar(sm, ax=sct_ax)
+        cbar.ax.set_xlabel(legend_title)
+
+        if is_categorical_cbar:
+            cbar.ax.set_yticks(
+                ticks=[high - (high - low) / 2 for low, high in zip(bounds, bounds[1:])],
+                labels=[str(cat) for cat in categories]
+            )
 
         fig.tight_layout()
     else:

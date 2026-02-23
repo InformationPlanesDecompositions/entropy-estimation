@@ -197,7 +197,21 @@ def build_parser() -> argparse.ArgumentParser:
         required=False,
         default=False,
         action=argparse.BooleanOptionalAction,
-        help='Should the experiment column be displayed as a cbar (alternatively: as legend)',
+        help='Should the experiment column be displayed as a colour bar (alternatively: as legend)',
+    )
+    comparison_q2_parser.add_argument(
+        '--is-categorical-cbar',
+        type=bool,
+        required=False,
+        default=False,
+        action=argparse.BooleanOptionalAction,
+        help='If set and <exp-as-cbar> is True, displays the experiment column as a discrete colour bar'
+    )
+    comparison_q2_parser.add_argument(
+        '--categorical-cbar-minimum',
+        type=int,
+        required=False,
+        default=0,
     )
     comparison_q2_parser.add_argument(
         '--legend-title',
