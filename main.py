@@ -365,6 +365,10 @@ def _compare_compression(parser: argparse.ArgumentParser, args: argparse.Namespa
     fig, ax = plt.subplots(figsize=(6, 4.8))
 
     palette_name = 'cividis'
+
+    if is_categorical_cbar:
+        palette_name += '_r'
+
     categories = sorted(experiments.values()) if exp_as_cbar else list(experiments.values())
 
     if is_categorical_cbar or not exp_as_cbar:
