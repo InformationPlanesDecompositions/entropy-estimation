@@ -1,26 +1,189 @@
 import argparse
+import datetime
+import pathlib
 
+
+def _run_selection(value: str):
+    if value is None or value.lower() == 'all':
+        return None
+
+    try:
+        val = int(value)
+
+        if val < 0:
+            raise ValueError()
+
+        return val
+    except ValueError:
+        raise argparse.ArgumentError(
+            argument=None,
+            message=f'Invalid argument {value}. Must be a positive integer or "best".',
+        )
+        
+
+def _add_config_arguments(
+    parser: argparse.ArgumentParser,
+    *,
+    include_experiment: bool = False,
+    is_experiment_required: bool = False,
+    include_mi: bool = False,
+) -> argparse.ArgumentParser:
+    parser.add_argument(
+        '-c', '--config',
+        type=str,
+        help='Path to configuration .yaml file for comparison',
+        required=True,
+    )
+
+    if include_mi:
+        parser.add_argument(
+            '--dir-mi',
+            type=pathlib.Path,
+            help='Path to directory containing MI data subdirectories',
+            default='output/mi',
+        )
+
+    if include_experiment:
+        parser.add_argument(
+            '--dir-experiments',
+            type=pathlib.Path,
+            help='Path to directory containing the experimental data',
+            required=is_experiment_required,
+        )
+
+    return parser
+
+
+def _add_aggregation_arguments(
+    parser: argparse.ArgumentParser,
+    *,
+    add_legend: bool = True,
+) -> argparse.ArgumentParser:
+    parser.add_argument(
+        '-n', '--n-epochs',
+        type=int,
+        default=50,
+        help='How many of the last epochs should be considered for aggregation',
+    )
+    parser.add_argument(
+        '-f', '--agg-func',
+        type=str,
+        choices=['mean', 'median'],
+        default='mean',
+        required=False,
+        help='Which aggregation function to use for plotting a point per experiment run'
+    )
+
+    if not add_legend:
+        return parser
+    
+    parser.add_argument(
+        '--as-cbar',
+        type=bool,
+        required=False,
+        default=True,
+        action=argparse.BooleanOptionalAction,
+        help='Should the experiment column be displayed as a colour bar (otherwise as normal legend)',
+    )
+    parser.add_argument(
+        '--is-discrete-cbar',
+        type=bool,
+        required=False,
+        default=False,
+        action=argparse.BooleanOptionalAction,
+        help='If set and <as-cbar> is True, displays the experiment column as a discrete colour bar'
+    )
+    parser.add_argument(
+        '--discrete-cbar-minimum',
+        type=int,
+        required=False,
+        default=0,
+    )
+    parser.add_argument(
+        '--legend-title',
+        type=str,
+        required=False,
+        default='Experiment',
+    )
+
+    return parser
+
+
+def _add_save_arguments(
+    parser: argparse.ArgumentParser,
+    *,
+    is_output_file: bool = True,
+) -> argparse.ArgumentParser:
+    parser.add_argument(
+        '-s', '--save',
+        type=bool,
+        action=argparse.BooleanOptionalAction,
+        default=True,
+    )
+
+    o = 'output/tmp/'
+
+    if is_output_file:
+        o += f'tmp_{datetime.datetime.now().strftime('%Y%m%d-%H%M%S')}.pdf'
+
+    parser.add_argument(
+        '-o', '--output',
+        type=pathlib.Path,
+        default=o,
+        help=f'Target output {"file" if is_output_file else "directory"}'
+    )
+
+    return parser
+        
 
 def build_parser() -> argparse.ArgumentParser:
-    root_parser = argparse.ArgumentParser(prog='EntropyEstimation')
+    root_parser = argparse.ArgumentParser(prog='Information Plane Analysis')
 
     subparsers = root_parser.add_subparsers(dest='command', required=True)
 
-    # ====================
+    # ============================================================
     # Entropy Evaluation
-    # ====================
+    # ============================================================
     eval_parser = subparsers.add_parser('evaluate', description='Evaluate the plug-in entropy estimator')
-    eval_parser_group = eval_parser.add_subparsers(dest='eval_target', required=True)
+    eval_parser_group = eval_parser.add_subparsers(dest='task', required=True)
 
-    # --------------------
+    # ------------------------------------------------------------
     # Toy Examples
-    # --------------------
-    ee_toy_parser = eval_parser_group.add_parser('toy', description='Evaluate the entropy estimator on toy examples')
-    build_evaluation_parsers(ee_toy_parser)
+    # ------------------------------------------------------------
+    ee_plugin_parser = eval_parser_group.add_parser('plug-in', description='Evaluate the entropy estimator on toy examples')
+    ee_plugin_parser.add_argument(
+        '-M', '--n-experiments',
+        type=int,
+        help='Number of experiments to conduct',
+        default=20,
+    )
+    ee_plugin_parser.add_argument(
+        '-D', '--max_dimensions',
+        type=int,
+        default=20,
+        help='The maximum number of dimension of the Bernoulli RV vectors',
+    )
+    ee_plugin_parser.add_argument(
+        '-N', '--n_samples',
+        type=int,
+        help='The number of samples per experiment',
+        required=True,
+    )
+    ee_plugin_parser.add_argument(
+        '--use-existing',
+        type=bool,
+        action=argparse.BooleanOptionalAction,
+        help='Use already existing generated data for plotting. If not existing but set to True, the data will be generated regardless',
+        default=True
+    )
+    ee_plugin_parser = _add_save_arguments(
+        ee_plugin_parser,
+        is_output_file=False,
+    )
 
-    # --------------------
+    # ------------------------------------------------------------
     # Entropy Evaluation on Trained Models
-    # --------------------
+    # ------------------------------------------------------------
     ee_model_parser = eval_parser_group.add_parser('model', description='Evaluate the entropy estimator on activations from a model')
     ee_model_parser.add_argument(
         '-d', '--data',
@@ -30,7 +193,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     ee_model_parser.add_argument(
         '-r', '--run',
-        type=int,
+        type=_run_selection,
         help='Experiment run to use',
         default=0,
     )
@@ -42,70 +205,58 @@ def build_parser() -> argparse.ArgumentParser:
         default=True,
     )
 
-    # ====================
+    # ============================================================
     # Mutual Information Estimation
-    # ====================
-    mi_parser = subparsers.add_parser('mi', aliases=['mutual-information'])
+    # ============================================================
+    mi_parser = subparsers.add_parser('mi')
     build_mi_parser(mi_parser)
 
-    # ====================
-    # Compare experiments
-    # ====================
-    comparison_parser = subparsers.add_parser('compare', description='Compare experiments based on their MI estimates')
-    comparison_parser_group = comparison_parser.add_subparsers(dest='comparison_target', required=True)
+    # ============================================================
+    # RQ1 (Compression Phase)
+    # ============================================================
+    q1_parser = subparsers.add_parser('q1', description='Evaluate the experiments regarding RQ1')
+    q1_parser_group = q1_parser.add_subparsers(dest='task', required=True)
 
-    comparison_parent_parser = argparse.ArgumentParser(add_help=False)
-    comparison_parent_parser.add_argument(
-        '-c', '--config',
-        type=str,
-        help='Path to configuration .yaml file for comparison',
-        required=True,
-    )
+    # ------------------------------------------------------------
+    # Single Information Plane (alias for simply <mi>)
+    # ------------------------------------------------------------
+    q1_parser_group.add_parser('mi', parents=[mi_parser], add_help=False)
 
-    comparison_parent_parser.add_argument(
-        '--dir-mi',
-        type=str,
-        help='Path to directory containing MI data subdirectories',
-        default='./output/mi'
-    )
-    comparison_parent_parser.add_argument(
-        '--dir-experiments',
-        type=str,
-        help='Path to directory containing the experimental data',
-        required=True,
-    )
-
-    # --------------------
-    # Information Plane
-    # --------------------
-    comparison_ip_parser = comparison_parser_group.add_parser(
-        name='ip',
-        aliases=['information-plane'],
+    # ------------------------------------------------------------
+    # Compare multiple Information Planes (optionally accuracy and loss curves, too)
+    # ------------------------------------------------------------
+    q1_comparison_parser = q1_parser_group.add_parser(
+        'ips',
         description='Compare the experiments on their information plane (optionally also in accuracy and loss)',
-        parents=[comparison_parent_parser],
     )
-    comparison_ip_parser.add_argument(
+    q1_comparison_parser = _add_config_arguments(
+        q1_comparison_parser,
+        include_mi=True,
+        include_experiment=True,
+        is_experiment_required=False,
+    )
+    q1_comparison_parser.add_argument(
         '-r', '--run',
-        type=int,
+        type=_run_selection,
         help='Run number (positive integer)',
         default=0,
         required=False,
     )
-    comparison_ip_parser.add_argument(
+    q1_comparison_parser.add_argument(
         '--accuracy-plot',
         type=bool,
         action=argparse.BooleanOptionalAction,
         help='Plot validation accuracy over epochs',
         required=False,
     )
-    comparison_ip_parser.add_argument(
+    q1_comparison_parser.add_argument(
         '--loss-plot',
         type=bool,
         action=argparse.BooleanOptionalAction,
         help='Plot training and validation loss over epochs',
         required=False,
     )
-    comparison_ip_parser.add_argument(
+    q1_comparison_parser.add_argument(
         '--plot-layout',
         type=int,
         nargs=2,
@@ -115,157 +266,117 @@ def build_parser() -> argparse.ArgumentParser:
         metavar=('n_rows', 'n_cols')
     )
 
-    # --------------------
-    # Q1 (Compression)
-    # --------------------
-    comparison_q1_parser = comparison_parser_group.add_parser(
-        name='q1',
-        description='Compare the experiments on their compression factor',
+    # ------------------------------------------------------------
+    # Compare compression factors of experiments
+    # ------------------------------------------------------------
+    q1_compression_parser = q1_parser_group.add_parser(
+        'compression',
+        description='Compare the experiments on their computed compression factor',
     )
-    comparison_q1_parser.add_argument(
-        '-c', '--config',
-        type=str,
-        help='Path to configuration .yaml file for comparison',
-        required=True,
+    q1_compression_parser = _add_config_arguments(
+        q1_compression_parser,
+        include_mi=True,
+        include_experiment=False,
     )
-    comparison_q1_parser.add_argument(
-        '--dir-mi',
-        type=str,
-        help='Path to directory containing MI data subdirectories',
-        default='./output/mi'
-    )
-    comparison_q1_parser.add_argument(
+    # TODO: Extract to helper function for Q2 plots
+    q1_compression_parser.add_argument(
         '-r', '--reference_func',
         type=str,
         choices=['max', 'start'],
         required=False,
-        default='start',
+        default='max',
         help='How to determine the reference value for the compression factor',
     )
-    comparison_q1_parser.add_argument(
+    q1_compression_parser.add_argument(
         '-n', '--n-epochs',
         type=int,
         default=50,
         help='How many of the last epochs should be considered for aggregation',
     )
-    comparison_q1_parser.add_argument(
+    # TODO: Update parser and code to allow discrete cbar
+    q1_compression_parser.add_argument(
         '--exp-as-cbar',
         type=bool,
         required=False,
         default=False,
         action=argparse.BooleanOptionalAction,
-        help='Should the experiment column be displayed as a cbar (alternatively: as legend)',
+        help='Should the experiment column be displayed as a colourbar (alternatively: as legend)',
     )
-    comparison_q1_parser.add_argument(
+    q1_compression_parser.add_argument(
         '--legend-title',
         type=str,
         required=False,
         default='Experiment',
     )
 
-    # --------------------
-    # Q2 (Compression vs. Accuracy)
-    # --------------------
-    q2_rank_corr_parser = subparsers.add_parser(
-        name='correlation', aliases=['spearman', 'rc'],
-        description='Compute the Spearman Rank Correlation between compression and validation accuracy',
-        parents=[comparison_parent_parser],
+    # ============================================================
+    # RQ2 (Relation compression <-> generalisation)
+    # ============================================================
+    q2_parser = subparsers.add_parser('q2', description='Evaluate the experiments regarding RQ2')
+    q2_parser_group = q2_parser.add_subparsers(dest='task', required=True)
+
+    # ------------------------------------------------------------
+    # Compare I(X;T_\ell) and val. accuracy for multiple experiments
+    # ------------------------------------------------------------
+    q2_comparison_parser = q2_parser_group.add_parser(
+        'compare',
+        description='Compare the experiments on their compression in one layer w.r.t. the achieved validation accuracy',
     )
-    q2_rank_corr_parser.add_argument(
-        '-n', '--n-epochs',
+    q2_comparison_parser = _add_config_arguments(
+        q2_comparison_parser,
+        include_mi=True,
+        include_experiment=True,
+        is_experiment_required=True,
+    )
+    q2_comparison_parser.add_argument(
+        '-l', '--layer-offset-idx',
         type=int,
-        default=50,
-        help='How many of the last epochs should be considered for aggregation',
+        required=True,
+        help='The layer idx, offset from the output layer, to show the compression on. i.e., <-1> means the layer *before* the output layer',
     )
-    q2_rank_corr_parser.add_argument(
+    q2_comparison_parser = _add_aggregation_arguments(
+        q2_comparison_parser,
+        add_legend=True,
+    )
+    q2_comparison_parser = _add_save_arguments(
+        q2_comparison_parser,
+        is_output_file=True,
+    )
+    q2_comparison_parser.add_argument(
+        '--show-plots',
+        type=bool,
+        action=argparse.BooleanOptionalAction,
+        help='Display the plot',
+        default=True,
+    )
+
+    # ------------------------------------------------------------
+    # Compute Spearman's rank correlation between I(X;T_\ell) and Acc.
+    # ------------------------------------------------------------
+    q2_correlation_parser = q2_parser_group.add_parser(
+        'correlation',
+        description='Compute the Spearman rank correlation coefficients between the MI and validation accuracy',
+    )
+    q2_correlation_parser = _add_config_arguments(
+        q2_correlation_parser,
+        include_mi=True,
+        include_experiment=True,
+        is_experiment_required=True,
+    )
+    q2_correlation_parser = _add_aggregation_arguments(
+        q2_correlation_parser,
+        add_legend=False,
+    )
+    q2_correlation_parser.add_argument(
         '--to-latex',
         action=argparse.BooleanOptionalAction,
         default=True,
         help='Additionally output the correlation data as table body',
         type=bool,
     )
-    q2_rank_corr_parser.add_argument(
-        '-o', '--output',
-        default='output/q2/',
-        type=str,
-        help='Name of the target directory for the correlation data. Files will be created as <rank_corr_data.csv> and, optionally, <rank_corr_table.tex>'
-    )
-
-    # --------------------
-
-    comparison_q2_parser = comparison_parser_group.add_parser(
-        name='q2',
-        description='Compare the experiments on their compression in one layer w.r.t. validation accuracy',
-        parents=[comparison_parent_parser],
-    )
-    comparison_q2_parser.add_argument(
-        '-l', '--layer-offset-idx',
-        type=int,
-        required=True,
-        help='The layer idx, offset from the output layer, to show the compression on. i.e., <-1> means the layer *before* the output layer',
-    )
-    comparison_q2_parser.add_argument(
-        '-n', '--n-epochs',
-        type=int,
-        default=50,
-        help='How many of the last epochs should be considered for aggregation',
-    )
-    comparison_q2_parser.add_argument(
-        '--agg-func',
-        type=str,
-        choices=['mean', 'median'],
-        default='mean',
-        required=False,
-        help='Which aggregation function to use for plotting a point per experiment run'
-    )
-    comparison_q2_parser.add_argument(
-        '--exp-as-cbar',
-        type=bool,
-        required=False,
-        default=False,
-        action=argparse.BooleanOptionalAction,
-        help='Should the experiment column be displayed as a colour bar (alternatively: as legend)',
-    )
-    comparison_q2_parser.add_argument(
-        '--is-categorical-cbar',
-        type=bool,
-        required=False,
-        default=False,
-        action=argparse.BooleanOptionalAction,
-        help='If set and <exp-as-cbar> is True, displays the experiment column as a discrete colour bar'
-    )
-    comparison_q2_parser.add_argument(
-        '--categorical-cbar-minimum',
-        type=int,
-        required=False,
-        default=0,
-    )
-    comparison_q2_parser.add_argument(
-        '--legend-title',
-        type=str,
-        required=False,
-        default='Experiment',
-    )
-    comparison_q2_parser.add_argument(
-        '-s', '--save',
-        type=bool,
-        action=argparse.BooleanOptionalAction,
-        help='Save the generated plot',
-        default=True,
-    )
-    comparison_q2_parser.add_argument(
-        '-o', '--output',
-        type=str,
-        help='Path/name of the target file for the generated plot',
-        required=False,
-        default='output/mi/compression/tmp.pdf'
-    )
-    comparison_q2_parser.add_argument(
-        '--show-plots',
-        type=bool,
-        action=argparse.BooleanOptionalAction,
-        help='Display the plot',
-        default=True,
+    q2_correlation_parser = _add_save_arguments(
+        q2_correlation_parser,
+        is_output_file=False,
     )
 
     return root_parser
@@ -274,28 +385,12 @@ def build_parser() -> argparse.ArgumentParser:
 def build_mi_parser(
     mi_parser: argparse.ArgumentParser | None,
 ) -> argparse.ArgumentParser:
-    def run_selection(value: str):
-        if value is None or value.lower() == 'all':
-            return None
-
-        try:
-            val = int(value)
-
-            if val < 0:
-                raise ValueError()
-
-            return val
-        except ValueError:
-            raise argparse.ArgumentTypeError(
-                f'Invalid argument {value}. Must be a positive integer or "best".'
-            )
-
     if mi_parser is None:
         mi_parser = argparse.ArgumentParser()
 
     mi_parser.add_argument(
         '-d', '--data',
-        type=str,
+        type=pathlib.Path,
         help='Path to the data directory',
         required=True,
     )
@@ -308,7 +403,7 @@ def build_mi_parser(
     )
     mi_parser.add_argument(
         '-r', '--run',
-        type=run_selection,
+        type=_run_selection,
         help='Run number (positive integer), None or "all" for all runs.',
         default='all',
         required=False,
@@ -337,59 +432,3 @@ def build_mi_parser(
 
     return mi_parser
 
-
-def build_evaluation_parsers(
-    eval_parser: argparse.ArgumentParser | None
-) -> argparse.ArgumentParser:
-    if eval_parser is None:
-        eval_parser = argparse.ArgumentParser()
-
-    eval_subparsers = eval_parser.add_subparsers(dest='evaluation_type', required=True)
-
-    # ====================
-    # Plug-In Estimate evaluation
-    # ====================
-    plugin_subparser = eval_subparsers.add_parser(
-        'plug-in'
-    )
-
-    plugin_subparser.add_argument(
-        '-M', '--n-experiments',
-        type=int,
-        help='Number of experiments to conduct',
-        default=20,
-    )
-    plugin_subparser.add_argument(
-        '-D', '--max_dimensions',
-        type=int,
-        default=20,
-        help='The maximum number of dimension of the Bernoulli RV vectors',
-    )
-    plugin_subparser.add_argument(
-        '-N', '--n_samples',
-        type=int,
-        help='The number of samples per experiment',
-        required=True,
-    )
-    plugin_subparser.add_argument(
-        '--use-existing',
-        type=bool,
-        action=argparse.BooleanOptionalAction,
-        help='Use already existing generated data for plotting. If not existing but set to True, the data will be generated regardless',
-        default=True
-    )
-    plugin_subparser.add_argument(
-        '-s', '--save',
-        type=bool,
-        action=argparse.BooleanOptionalAction,
-        help='Save the generated plots',
-        default=True,
-    )
-    plugin_subparser.add_argument(
-        '-o', '--output',
-        type=str,
-        help='Target directory for generated output',
-        default='output/ee',
-    )
-
-    return eval_parser

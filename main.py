@@ -3,6 +3,7 @@ import itertools
 
 import os
 from os import path
+import pathlib
 
 from collections import defaultdict
 
@@ -48,12 +49,12 @@ def _perform_evaluation(parser: argparse.ArgumentParser, args: argparse.Namespac
 
 
 def _evaluate_subadditivity(parser: argparse.ArgumentParser, args: argparse.Namespace):
-    data_dir = args.data
+    data_dir: pathlib.Path = args.data
 
-    if not path.isdir(data_dir):
+    if not data_dir.is_dir():
         parser.error(f'Please provide an existing directory, did not find {data_dir}')
     
-    dir_name = path.basename(path.dirname(data_dir) if path.basename(data_dir) == '' else data_dir)
+    dir_name = data_dir.name
 
     output_dir = f'output/ee/'
 
@@ -67,7 +68,7 @@ def _evaluate_subadditivity(parser: argparse.ArgumentParser, args: argparse.Name
 
     activation_file = h5py.File(activation_path, 'r')
 
-    run_idx = args.run
+    run_idx = int(args.run) if args.run is None else 0
 
     run_data = activation_file.get(f'run_{run_idx}', None) if activation_file.attrs['has_top_group'] else activation_file
 
@@ -83,17 +84,14 @@ def _evaluate_subadditivity(parser: argparse.ArgumentParser, args: argparse.Name
 
 
 def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Namespace):
-    data_dir = args.data
+    data_dir: pathlib.Path = args.data
 
-    if not path.isdir(data_dir):
+    if data_dir.is_dir():
         parser.error(f'Please provide an existing directory, did not find {data_dir}')
 
-    prefix, dir_name = path.split(path.dirname(data_dir) if path.basename(data_dir) == '' else data_dir)
+    dir_name = path.join(data_dir.parent.name, data_dir.name)
 
-    if (prefix := path.basename(prefix)) != 'output':
-        dir_name = path.join(prefix, dir_name)
-
-    output_dir = f'output/mi/{dir_name}'
+    output_dir = path.join('output/mi/', dir_name)
 
     if args.save:
         os.makedirs(output_dir, exist_ok=True)
@@ -111,13 +109,13 @@ def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Names
 
         df_data = pd.read_csv(path.join(output_dir, 'mi_data.csv'), decimal=',', sep=';')
     else:
-        activation_path = path.join(data_dir, 'activations.h5')
-        data_path = path.join(data_dir, 'data.h5')
+        activation_path = data_dir.joinpath('activations.h5')
+        data_path = data_dir.joinpath('data.h5')
 
-        if not path.isfile(activation_path):
+        if not activation_path.is_file():
             parser.error(f'No <activations.h5> found in given directory')
 
-        if not path.isfile(data_path):
+        if not data_path.is_file():
             parser.error(f'No <data.h5> found in given directory')
 
         activation_file = h5py.File(activation_path, 'r')
@@ -200,34 +198,35 @@ def _compare_experiments(parser: argparse.ArgumentParser, args: argparse.Namespa
 
     n_exp = min(n_exp, max_n_exp)
 
-    dir_exp = args.dir_experiments
-    dir_mi = args.dir_mi
+    dir_mi: pathlib.Path = args.dir_mi
+    dir_exp: pathlib.Path | None = args.dir_experiments
 
-    if not path.isdir(dir_exp):
-        parser.error(f'Invalid data directory for experiments provided, could not find {dir_exp}')
-
-    if not path.isdir(dir_mi):
+    if not dir_mi.is_dir():
         parser.error(f'Invalid data directory for MI estimates provided, could not find {dir_mi}')
 
     run_idx = config.get('run_idx', 0) if args.run is None else args.run
-    plot_accuracy = config.get('accuracy_plot', True) if args.accuracy_plot is None else args.accuracy_plot
-    plot_losses = config.get('loss_plot', False) if args.loss_plot is None else args.loss_plot
+    plot_accuracy: bool = config.get('accuracy_plot', True) if args.accuracy_plot is None else args.accuracy_plot
+    plot_losses: bool= config.get('loss_plot', False) if args.loss_plot is None else args.loss_plot
 
-    dfs_metrics = []
-    dfs_mis = []
+    files = ['mi_data.csv']
+    dirs = [dir_mi]
 
-    for p, n in experiments.items():
-        df_metrics = pd.read_csv(path.join(dir_exp, p,'metrics.csv'), sep=';', decimal=',')
-        df_mi = pd.read_csv(path.join(dir_mi, p, 'mi_data.csv'), sep=';', decimal=',')
+    if plot_losses or plot_accuracy:
+        if dir_exp is None:
+            parser.error('No data directory for experiments provided')
 
-        df_metrics['Experiment'] = n
-        df_mi['Experiment'] = n
+        if not dir_exp.is_dir():
+            parser.error(f'Invalid data directory for experiments provided, could not find {dir_exp}')
 
-        dfs_metrics.append(df_metrics)
-        dfs_mis.append(df_mi)
+        files.append('metrics.csv')
+        dirs.append(dir_exp)
 
-    df_metrics = pd.concat(dfs_metrics, ignore_index=True)
-    df_mis = pd.concat(dfs_mis, ignore_index=True)
+    [df_mis, *df_metrics] = _concat_experiment_files(
+        experiments,
+        files=files,
+        dirs=dirs,  # type: ignore
+        is_key_path=True
+    )
 
     figsize = (5 * w_ratio, 5 * h_ratio)
 
@@ -258,11 +257,16 @@ def _compare_experiments(parser: argparse.ArgumentParser, args: argparse.Namespa
     cbar = fig.colorbar(cmap, ax=axes[n_cols - 1::n_cols])
     cbar.ax.set_xlabel('Epoch')
     fig.subplots_adjust(right=0.85)
-    fig.tight_layout(rect=[0, 0, 0.85, 1])
+    fig.tight_layout(rect=(0, 0, 0.85, 1))
     
     # --------------------
     # Plot metrics
     # --------------------
+
+    if plot_losses or plot_accuracy:
+        df_metrics, *_ = df_metrics
+    else:
+        return
 
     for plt_type, show_plt in [('Loss', plot_losses), ('Accuracy', plot_accuracy)]:
         if not show_plt:
@@ -319,13 +323,13 @@ def _compare_compression(parser: argparse.ArgumentParser, args: argparse.Namespa
 
     n_exp = len(experiments)
 
-    dir_exp = str(args.dir_experiments)
-    dir_mi = str(args.dir_mi)
+    dir_exp: pathlib.Path = args.dir_experiments
+    dir_mi: pathlib.Path = args.dir_mi
 
-    if not path.isdir(dir_exp):
+    if not dir_exp.is_dir():
         parser.error(f'Invalid data directory for experiments provided, could not find {dir_exp}')
 
-    if not path.isdir(dir_mi):
+    if not dir_mi.is_dir():
         parser.error(f'Invalid data directory for MI estimates provided, could not find {dir_mi}')
 
     layer_revoffset_idx = int(args.layer_offset_idx)
@@ -335,9 +339,9 @@ def _compare_compression(parser: argparse.ArgumentParser, args: argparse.Namespa
     n_epochs = int(args.n_epochs)
     agg_func: str = str(args.agg_func)
 
-    exp_as_cbar: bool = bool(args.exp_as_cbar)
-    is_categorical_cbar: bool = exp_as_cbar and bool(args.is_categorical_cbar)
-    cat_cbar_minimum: int = int(args.categorical_cbar_minimum)
+    as_cbar: bool = bool(args.as_cbar)
+    is_discrete_cbar: bool = as_cbar and bool(args.is_discrete_cbar)
+    cbar_minimum: int = int(args.discrete_cbar_minimum)
 
     legend_title: str = str(args.legend_title)
 
@@ -366,12 +370,12 @@ def _compare_compression(parser: argparse.ArgumentParser, args: argparse.Namespa
 
     palette_name = 'cividis'
 
-    if is_categorical_cbar:
+    if is_discrete_cbar:
         palette_name += '_r'
 
-    categories = sorted(experiments.values()) if exp_as_cbar else list(experiments.values())
+    categories = sorted(experiments.values()) if as_cbar else list(experiments.values())
 
-    if is_categorical_cbar or not exp_as_cbar:
+    if is_discrete_cbar or not as_cbar:
         palette = sns.color_palette(palette=palette_name, n_colors=n_exp)
         c_per_exp = {exp: palette[idx] for idx, exp in enumerate(categories)}
     else:
@@ -395,13 +399,13 @@ def _compare_compression(parser: argparse.ArgumentParser, args: argparse.Namespa
         data=df_agg,
         x=('MI_x', agg_func), y=('Val. Acc', agg_func),
         hue='Experiment', style='Experiment', hue_order=experiments.values(),
-        palette=palette_name if exp_as_cbar else c_per_exp,  # type: ignore
+        palette=palette_name if as_cbar else c_per_exp,  # type: ignore
         s=50,
         ax=ax,
         zorder=2,
     )
     
-    if not exp_as_cbar:
+    if not as_cbar:
         handles, labels = sct_ax.get_legend_handles_labels()
 
     if (lg := sct_ax.get_legend()) is not None:
@@ -412,10 +416,10 @@ def _compare_compression(parser: argparse.ArgumentParser, args: argparse.Namespa
 
     ax.grid(True, alpha=0.75, ls=':')
 
-    if exp_as_cbar:
-        bounds = [cat_cbar_minimum] + categories if cat_cbar_minimum not in categories else categories
+    if as_cbar:
+        bounds = [cbar_minimum] + categories if cbar_minimum not in categories else categories
 
-        if is_categorical_cbar:
+        if is_discrete_cbar:
             cmap = sns.color_palette(palette=palette_name, as_cmap=True)
             norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N, extend='neither')
             value_array = []
@@ -429,7 +433,7 @@ def _compare_compression(parser: argparse.ArgumentParser, args: argparse.Namespa
         cbar = ax.figure.colorbar(sm, ax=sct_ax)
         cbar.ax.set_xlabel(legend_title)
 
-        if is_categorical_cbar:
+        if is_discrete_cbar:
             cbar.ax.set_yticks(
                 ticks=[high - (high - low) / 2 for low, high in zip(bounds, bounds[1:])],
                 labels=[str(cat) for cat in categories]
@@ -442,12 +446,15 @@ def _compare_compression(parser: argparse.ArgumentParser, args: argparse.Namespa
         fig.tight_layout(rect=(0, 0, 0.8, 1))
 
     if bool(args.save):
-        output = str(args.output)
+        output: pathlib.Path = args.output
 
-        if not output.lower().endswith('.pdf'):
-            output += '.pdf'
+        # TODO: add default file name
+        if output.suffix == '':
+            output = output.with_name('tmp.pdf')
+        elif output.suffix != '.pdf':
+            output = output.with_suffix('.pdf')
 
-        os.makedirs(path.dirname(output), exist_ok=True)
+        os.makedirs(output.parent, exist_ok=True)
         plt.savefig(output, dpi=300, format='pdf')
 
     if bool(args.show_plots):
@@ -521,7 +528,7 @@ def _quantify_compression(parser: argparse.ArgumentParser, args: argparse.Namesp
 def _concat_experiment_files(
     experiments: dict,
     files: list[str],
-    dirs: list[str],
+    dirs: list[str | pathlib.Path],
     is_key_path: bool = True,
 ) -> list[pd.DataFrame]:
     if len(files) != len(dirs):
@@ -550,17 +557,17 @@ def _compute_compression_rank_correlation(parser: argparse.ArgumentParser, args:
 
     config = config.get('comparison', config)
 
-    dir_mi = str(args.dir_mi)
-    dir_exp = str(args.dir_experiments)
+    dir_mi: pathlib.Path = args.dir_mi
+    dir_exp: pathlib.Path = args.dir_experiments
 
-    if not path.isdir(dir_mi):
+    if not dir_mi.is_dir():
         parser.error(f'Invalid data directory for MI estimates provided, could not find {dir_mi}')
 
-    if not path.isdir(dir_exp):
-        parser.error(f'Invalid data directory for experiments provided, could not find {dir_mi}')
+    if not dir_exp.is_dir():
+        parser.error(f'Invalid data directory for experiments provided, could not find {dir_exp}')
 
     to_latex = bool(args.to_latex)
-    output_dir = str(args.output)
+    output_dir: pathlib.Path = args.output
     n_epochs = int(args.n_epochs)
 
     experiment_groups: dict[str, dict[str, list[str]]] = config.get('experiment_groups', {})
@@ -641,25 +648,38 @@ def _compute_compression_rank_correlation(parser: argparse.ArgumentParser, args:
         f.writelines(lines)
 
 
+def _get_fn_from_args(args: argparse.Namespace):
+    cmd = str(args.command).lower()
+    task = str(getattr(args, 'task', '')).lower()
+
+    match cmd, task:
+        case 'evaluate', 'plug-in':
+            return _perform_evaluation
+        case 'evaluate', _:
+            return _evaluate_subadditivity
+        case ('mi', _) | ('q1', 'mi'):
+            return _perform_mi_estimation
+        case 'q1', 'ips':
+            return _compare_experiments
+        case 'q1', 'compression':
+            return _quantify_compression
+        case 'q2', 'compare':
+            return _compare_compression
+        case 'q2', 'correlation':
+            return _compute_compression_rank_correlation
+        
+    return None
+
 def main():
     parser = cli.parser.build_parser()
     args = parser.parse_args()
 
-    match args.command:
-        case 'evaluate':
-            if args.eval_target == 'toy':
-                _perform_evaluation(parser, args)
-            else:
-                _evaluate_subadditivity(parser, args)
-        case 'mi' | 'mutual-information':
-            _perform_mi_estimation(parser, args)
-        case 'compare':
-            if args.comparison_target in ['ip', 'information_plane']:
-                _compare_experiments(parser, args)
-            elif args.comparison_target == 'q1':
-                _quantify_compression(parser, args)
-            else:
-                _compare_compression(parser, args)
+    fn = _get_fn_from_args(args)
+
+    if fn is None:
+        parser.error(f'Invalid command and task provided')
+
+    fn(parser, args)
 
 
 if __name__ == '__main__':
