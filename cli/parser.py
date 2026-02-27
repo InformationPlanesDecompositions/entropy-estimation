@@ -166,6 +166,33 @@ def build_parser() -> argparse.ArgumentParser:
     # --------------------
     # Q2 (Compression vs. Accuracy)
     # --------------------
+    q2_rank_corr_parser = subparsers.add_parser(
+        name='correlation', aliases=['spearman', 'rc'],
+        description='Compute the Spearman Rank Correlation between compression and validation accuracy',
+        parents=[comparison_parent_parser],
+    )
+    q2_rank_corr_parser.add_argument(
+        '-n', '--n-epochs',
+        type=int,
+        default=50,
+        help='How many of the last epochs should be considered for aggregation',
+    )
+    q2_rank_corr_parser.add_argument(
+        '--to-latex',
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help='Additionally output the correlation data as table body',
+        type=bool,
+    )
+    q2_rank_corr_parser.add_argument(
+        '-o', '--output',
+        default='output/q2/',
+        type=str,
+        help='Name of the target directory for the correlation data. Files will be created as <rank_corr_data.csv> and, optionally, <rank_corr_table.tex>'
+    )
+
+    # --------------------
+
     comparison_q2_parser = comparison_parser_group.add_parser(
         name='q2',
         description='Compare the experiments on their compression in one layer w.r.t. validation accuracy',

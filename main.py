@@ -545,6 +545,102 @@ def _concat_experiment_files(
     return [pd.concat(df_list, ignore_index=True) for df_list in dfs.values()]
 
 
+def _compute_compression_rank_correlation(parser: argparse.ArgumentParser, args: argparse.Namespace):
+    config = cli.configure.read_config(args.config)
+
+    config = config.get('comparison', config)
+
+    dir_mi = str(args.dir_mi)
+    dir_exp = str(args.dir_experiments)
+
+    if not path.isdir(dir_mi):
+        parser.error(f'Invalid data directory for MI estimates provided, could not find {dir_mi}')
+
+    if not path.isdir(dir_exp):
+        parser.error(f'Invalid data directory for experiments provided, could not find {dir_mi}')
+
+    to_latex = bool(args.to_latex)
+    output_dir = str(args.output)
+    n_epochs = int(args.n_epochs)
+
+    experiment_groups: dict[str, dict[str, list[str]]] = config.get('experiment_groups', {})
+    experiments = {exp: exp for groups in experiment_groups.values() for group in groups.values() for exp in group}
+
+    df_groupings = pd.DataFrame(
+        [
+            (ds_name, grp_name, exp) for ds_name, ds in experiment_groups.items()
+            for grp_name, grp in ds.items()
+            for exp in grp
+        ],
+        columns=['Dataset', 'Group', 'Experiment'],
+    )
+
+    df_metrics, df_mis, *_ = _concat_experiment_files(
+        experiments,
+        ['metrics.csv', 'mi_data.csv'],
+        [dir_exp, dir_mi],
+        is_key_path=True
+    )
+
+    df = pd.merge(df_mis, df_metrics, on=['Experiment', 'Run', 'Epoch'], how='left')
+
+    df.drop_duplicates(subset=['Experiment'])
+
+    max_layer_indices = df.groupby(by='Experiment')['Layer'].max()
+    df['Layer'] = df.apply(lambda row: row['Layer'] - max_layer_indices[row['Experiment']], axis=1).astype(int)
+    df = df[df['Epoch'].ge(df['Epoch'].max() - n_epochs + 1)]
+    df.drop(index=df[df['Layer'] == 0].index, inplace=True)
+
+    df = df_groupings.merge(df, on='Experiment', how='right')
+
+    df_grouped = df.groupby(by=['Dataset', 'Group', 'Experiment', 'Run', 'Layer'])
+    df_agg = df_grouped.aggregate({
+        'MI_x': ['mean'],
+        'Val. Acc': ['mean']
+    }).reset_index()
+
+    import scipy.stats
+
+    data: defaultdict[str, list] = defaultdict(list)
+
+    for (dataset, group, layer_idx), df_group in df_agg.groupby(by=['Dataset', 'Group', 'Layer']):
+        r, p = scipy.stats.spearmanr(df_group[[('MI_x', 'mean'), ('Val. Acc', 'mean')]])
+
+        data['Dataset'].append(dataset)
+        data['Group'].append(group)
+        data['Layer'].append(layer_idx)
+        data['SpearmanR'].append(r)
+        data['p-Value'].append(p)
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    df_result = pd.DataFrame(data)
+    df_result.to_csv(path.join(output_dir, 'rank_corr_data.csv'), sep=';', decimal=',')
+
+    if not to_latex:
+        return
+    
+    lines = []
+
+    lines.append('Dataset & Experiment Group & Layer & Spearman $r_s$ & $p$-value \\\\\n')
+    lines.append('\\midrule\n')
+
+    last_ds = ''
+
+    for (_, ds, grp, layer_idx, r, p) in df_result.itertuples():
+        if last_ds != '' and ds != last_ds:
+            lines.append('\\midrule\n')
+        
+        last_ds = ds
+
+        lines.append(
+            f'{ds} & {grp} & {layer_idx} & $\\numprint{{{r}}}$ & ${f"\\numprint{{{p}}}" if p >= 0.0005 else "< 0.001"}$ \\\\\n'
+        )
+
+    with open(path.join(output_dir, 'rank_corr_table.tex'), 'w') as f:
+        f.writelines(lines)
+
+
 def main():
     parser = cli.parser.build_parser()
     args = parser.parse_args()
