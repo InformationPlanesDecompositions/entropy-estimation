@@ -460,69 +460,143 @@ def _compare_compression(parser: argparse.ArgumentParser, args: argparse.Namespa
     if bool(args.show_plots):
         plt.show(block=True)
 
-
+    
 def _quantify_compression(parser: argparse.ArgumentParser, args: argparse.Namespace):
     config = cli.configure.read_config(args.config)
-    config = config.get('comparison', config)
+    config: dict = config.get('comparison', config)
 
-    experiments: dict = config.get('experiments', {})
+    compression_config: dict = config.get('compression', {})
 
-    exp_as_cbar = bool(args.exp_as_cbar)
-    legend_title = str(args.legend_title)
-    ref = str(args.reference_func)
-    n_epochs = int(args.n_epochs)
-    dir_mi = str(args.dir_mi)
+    output_dir: pathlib.Path = args.output
+    save: bool = args.save
+    show_plt: bool = args.show_plots
 
-    if not path.isdir(dir_mi):
-        parser.error(f'Invalid data directory for MI estimates provided, could not find {dir_mi}')
+    dataset_order: list[str] = compression_config.get('dataset_order', [])
 
-    [df] = _concat_experiment_files(experiments, ['mi_data.csv'],  [dir_mi], is_key_path=True)
-
-    max_layer_indices = df.groupby(by='Experiment')['Layer'].max()
-    df['Layer'] = df.apply(lambda row: row['Layer'] - max_layer_indices[row['Experiment']], axis=1).astype(int)
-
-    df.drop(index=df[df['Layer'] == 0].index, inplace=True)
-
-    palette = 'plasma'
-
-    if ref == 'max':
-        ref_x = df.groupby(by=['Experiment', 'Run', 'Layer'])['MI_x'].max()
+    if args.use_existing:
+        df_rho = pd.read_csv('output/tmp/rho_data.csv', decimal=',', sep=';', index_col=0)
     else:
-        ref_x = df[df['Epoch'] == 0].groupby(by=['Experiment', 'Run', 'Layer'])['MI_x'].min()
+        experiment_groups: dict[str, dict[str, list[str]]] = config.get('experiment_groups', {})
+
+        included_layer_indices: dict[str, list[int]] = compression_config.get('include_layer_indices', {})
+        included_groups: list[str] = compression_config.get('groups', [])
+
+        n_epochs: int = args.n_epochs
+
+        dir_mi: pathlib.Path = args.dir_mi
+
+        if not dir_mi.is_dir():
+            parser.error(f'Invalid data directory for MI estimates provided, could not find {dir_mi}')
+
+        experiments = {
+            exp: exp
+            for groups in experiment_groups.values()
+            for group_name, group in groups.items()
+            if group_name in included_groups
+            for exp in group
+        }
+
+        df_groupings = pd.DataFrame(
+            [
+                (dataset, group_name, exp) for dataset, groups in experiment_groups.items()
+                for group_name, group in groups.items()
+                for exp in group
+            ],
+            columns=['Dataset', 'Group', 'Experiment'],
+        )
+
+        df, *_ = _concat_experiment_files(
+            experiments,
+            files=['mi_data.csv'],
+            dirs=[dir_mi],
+            is_key_path=True,
+        )
+
+        max_layer_indices = df.groupby(by='Experiment')['Layer'].max()
+        df['Layer'] = df.apply(
+            lambda row: row['Layer'] - max_layer_indices[row['Experiment']],
+            axis=1
+        ).astype(int)
+
+        df = df_groupings.merge(df, on='Experiment', how='right')
+
+        df.drop(
+            index=df[df[['Group', 'Layer']].apply(
+                lambda row: row['Layer'] not in included_layer_indices[row['Group']],
+                axis=1
+            )].index,
+            inplace=True,
+        )
+
+        s_n_layers_per_group = df.groupby(by=['Dataset', 'Group'])['Layer'].nunique()
+
+        ref_x = df.groupby(by=['Dataset', 'Group', 'Experiment', 'Run', 'Layer'])['MI_x'].max()
+        end_x = df[df['Epoch'].ge(df['Epoch'].max() - n_epochs + 1)].groupby(by=['Dataset', 'Group', 'Experiment', 'Run', 'Layer']).mean()['MI_x']
+
+        s_rho = (ref_x - end_x) / ref_x
+        df_rho = s_rho.reset_index(name='Rho')
+
+        df_rho['WD'] = df_rho['Experiment'].str.extract(r'-wd-(\d+(?:\.\d+)?e[-+]\d)')
+
+        df_rho.dropna(subset=['WD'], inplace=True)
+        df_rho['WD'] = df_rho['WD'].astype(float)
+
+        df_rho['#X-Axis'] = df_rho[['Dataset', 'Group', 'Layer']].apply(
+            lambda row: f'{row['Group']}\nLayer {row['Layer']}'
+                if s_n_layers_per_group[(row['Dataset'], row['Group'])] > 1
+                else row['Group'],
+            axis=1
+        )
     
-    end_x = df[df['Epoch'].ge(df['Epoch'].max() - n_epochs + 1)].groupby(by=['Experiment', 'Run', 'Layer']).mean()['MI_x']
+    palette = 'cividis'
+    cmap = plt.cm.ScalarMappable(cmap=palette)
+    cmap.set_array([df_rho['WD'].min(), df_rho['WD'].max()])
 
-    df_rho = (ref_x - end_x) / ref_x
-    df_rho = df_rho.reset_index(name='Rho')
+    fig, axes = plt.subplots(2, 2, figsize=(7.65, 7.2))
+    axes = np.ravel(axes)
 
-    fig, ax = plt.subplots()
+    for idx, dataset in enumerate(dataset_order):
+        df_dataset = df_rho[df_rho['Dataset'] == dataset]
+        ax: matplotlib.axes.Axes = axes[idx]
 
-    sns.boxplot(df_rho, x='Layer', y='Rho', fill=False, color='grey')
-    strp_ax = sns.swarmplot(
-        df_rho, x='Layer', y='Rho',
-        hue='Experiment', palette=palette, hue_order=experiments.values(),
-        ax=ax, legend=True,
-    )
+        plt_ax = sns.swarmplot(
+            df_dataset,
+            x='#X-Axis', y='Rho',
+            hue='WD', palette=palette,
+            s=3.5,
+            ax=ax,
+        )
 
-    strp_ax.legend().remove()
+        ax.tick_params(axis='x', rotation=45)
+        ax.set_xlabel('')
+        ax.set_ylabel(r'$\varrho$')
+        ax.set_title(dataset)
 
-    if exp_as_cbar:
-        min_val, max_val = df['Experiment'].min(), df['Experiment'].max()
+        ax.grid(True, alpha=0.85, ls='--', axis='y')
 
-        cmap = plt.cm.ScalarMappable(cmap=palette)
-        cmap.set_array([min_val, max_val])
+        if (lg := plt_ax.get_legend()) is not None:
+            lg.remove()
 
-        cbar = fig.colorbar(cmap, ax=strp_ax)
-        cbar.ax.set_xlabel(legend_title)
+    cbar = fig.colorbar(cmap, ax=axes[1::2])
+    cbar.ax.set_xlabel(r'$\lambda$')
+    fig.subplots_adjust(right=0.85)
+    fig.tight_layout(rect=(0, 0, 0.85, 1))
+
+    if save:
+        os.makedirs(output_dir, exist_ok=True)
+
+        plt.savefig(
+            output_dir.joinpath('compression_factors.pdf'),
+            dpi=300,
+            format='pdf',
+        )
+
+        df_rho.to_csv(output_dir.joinpath('compression_factor_data.csv'), decimal=',', sep=';')
+
+    if show_plt:
+        plt.show(block=True)
     else:
-        handles, labels = ax.get_legend_handles_labels()
-        fig.legend(handles, labels, title=legend_title)
-    
-    ax.grid(True, axis='y', alpha=0.75, ls='--')
-
-    fig.tight_layout()
-
-    plt.show(block=True)
+        plt.close()
 
 
 def _concat_experiment_files(
@@ -590,8 +664,6 @@ def _compute_compression_rank_correlation(parser: argparse.ArgumentParser, args:
     )
 
     df = pd.merge(df_mis, df_metrics, on=['Experiment', 'Run', 'Epoch'], how='left')
-
-    df.drop_duplicates(subset=['Experiment'])
 
     max_layer_indices = df.groupby(by='Experiment')['Layer'].max()
     df['Layer'] = df.apply(lambda row: row['Layer'] - max_layer_indices[row['Experiment']], axis=1).astype(int)

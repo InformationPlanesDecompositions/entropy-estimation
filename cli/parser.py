@@ -278,14 +278,11 @@ def build_parser() -> argparse.ArgumentParser:
         include_mi=True,
         include_experiment=False,
     )
-    # TODO: Extract to helper function for Q2 plots
     q1_compression_parser.add_argument(
-        '-r', '--reference_func',
-        type=str,
-        choices=['max', 'start'],
-        required=False,
-        default='max',
-        help='How to determine the reference value for the compression factor',
+        '--use-existing',
+        type=bool,
+        action=argparse.BooleanOptionalAction,
+        default=False,
     )
     q1_compression_parser.add_argument(
         '-n', '--n-epochs',
@@ -293,20 +290,15 @@ def build_parser() -> argparse.ArgumentParser:
         default=50,
         help='How many of the last epochs should be considered for aggregation',
     )
-    # TODO: Update parser and code to allow discrete cbar
     q1_compression_parser.add_argument(
-        '--exp-as-cbar',
+        '--show-plots',
         type=bool,
-        required=False,
-        default=False,
         action=argparse.BooleanOptionalAction,
-        help='Should the experiment column be displayed as a colourbar (alternatively: as legend)',
+        default=True,
     )
-    q1_compression_parser.add_argument(
-        '--legend-title',
-        type=str,
-        required=False,
-        default='Experiment',
+    q1_compression_parser = _add_save_arguments(
+        q1_compression_parser,
+        is_output_file=False,
     )
 
     # ============================================================
