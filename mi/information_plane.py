@@ -83,66 +83,6 @@ def estimate_mi_data(activation_data: h5py.File | h5py.Group, data_file: h5py.Fi
     return df_data
 
 
-def plot_information_plane(
-    df_data: pd.DataFrame,
-    show_plt: bool = True,
-    block_plt: bool = True,
-    save: bool = True,
-    output_dir: str = '',
-    postfix: str = '',
-    as_pdf: bool = False,
-    palette: str = 'cividis',
-    ax: matplotlib.axes.Axes | None = None,
-    cmap: plt.cm.ScalarMappable | None = None,
-):
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(6, 4.8))
-
-    if cmap is None:
-        min_epoch, max_epoch = df_data['Epoch'].min(), df_data['Epoch'].max()
-
-        norm = matplotlib.colors.Normalize(min_epoch, max_epoch)
-        cmap = plt.cm.ScalarMappable(norm=norm, cmap=palette)
-        cmap.set_array([])
-
-    sct_ax = sns.scatterplot(
-        data=df_data,
-        x='MI_x', y='MI_y',
-        hue='Epoch', style='Layer', palette=palette,
-        s=25, linewidth=0.1, edgecolor='#00000040',
-        ax=ax,
-    )
-
-    ax.set_xlabel(r'$I(X;T_\ell)$')
-    ax.set_ylabel(r'$I(T_\ell;Y)$')
-
-    if (lg := ax.get_legend()) is not None:
-        lg.remove()
-
-    if (not show_plt and not save):
-        return ax
-        
-    cbar = ax.figure.colorbar(cmap, ax=sct_ax)
-    cbar.ax.set_xlabel('Epoch')
-
-    if save:
-        plt.savefig(
-            path.join(output_dir, f'information_plane{postfix}.{"pdf" if as_pdf else "png"}'),
-            dpi=300,
-            bbox_inches='tight',
-        )
-
-    if show_plt:
-        if ax is None:
-            fig.tight_layout()
-
-        plt.show(block=block_plt)
-    else:
-        plt.close()
-
-    return ax
-
-
 def _estimate_output_layer_mi(latent: np.ndarray, target: np.ndarray) -> tuple[np.floating, ...]:
     sm = scipy.special.softmax(latent, axis=-1)
     sm_mean = np.mean(sm, axis=0)

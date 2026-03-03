@@ -1,4 +1,6 @@
+import os
 from os import path
+import pathlib
 
 
 import matplotlib.axes
@@ -36,7 +38,9 @@ def plot_information_plane(
         data=df_data,
         x='MI_x', y='MI_y',
         hue='Epoch', style='Layer', palette=palette,
-        s=25, linewidth=0.1, edgecolor='#00000040',
+        s=15,
+        linewidth=0.01,
+        edgecolor='#9999990F',
         ax=ax,
     )
 
@@ -80,6 +84,8 @@ def compare_information_planes(
     figsize: tuple[float, float],
     plot_losses: bool,
     plot_accuracy: bool,
+    save: bool,
+    output: pathlib.Path,
 ):
     palette = 'cividis'
 
@@ -115,6 +121,17 @@ def compare_information_planes(
     # --------------------
 
     if not (plot_losses or plot_accuracy) or df_metrics is None:
+        if save:
+            os.makedirs(output)
+
+            plt.savefig(
+                output.with_stem(output.stem + '_ip').with_suffix('.pdf'),
+                dpi=300,
+                format='pdf',
+            )
+
+        plt.show(block=True)
+
         return
 
     for plt_type, show_plt in [('Loss', plot_losses), ('Accuracy', plot_accuracy)]:
@@ -147,5 +164,12 @@ def compare_information_planes(
             fig.tight_layout(rect=(0, 0, 1, 0.925))
         else:
             fig.tight_layout()
+
+        if save:
+            fig.savefig(
+                output.with_stem(f'{output.stem}_{plt_type}').with_suffix('.pdf'),
+                dpi=300,
+                format='pdf'
+            )
     
     plt.show(block=True)

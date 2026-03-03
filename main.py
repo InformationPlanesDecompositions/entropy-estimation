@@ -161,7 +161,7 @@ def _perform_mi_estimation(parser: argparse.ArgumentParser, args: argparse.Names
     for run_idx in run_indices:
         df_run = df_data[df_data['Run'] == run_idx]
 
-        information_plane.plot_information_plane(
+        evaluation.information_planes.plot_information_plane(
             df_run, show_plt, block_plt=run_idx == last_run,
             save=args.save, output_dir=output_dir, postfix=f'_run_{run_idx}',
             as_pdf=args.plot_as_pdf,
@@ -172,7 +172,7 @@ def _compare_experiments(parser: argparse.ArgumentParser, args: argparse.Namespa
     config = cli.configure.read_config(args.config)
     config = config.get('comparison', config)
 
-    experiments = config.get('experiments', {})
+    experiments: dict[str, str] = config.get('experiments', {})
 
     if type(experiments) != dict or len(experiments) == 0:
         parser.error(f'Please provide a dict of experiments')
@@ -197,6 +197,9 @@ def _compare_experiments(parser: argparse.ArgumentParser, args: argparse.Namespa
         experiments = dict(itertools.islice(experiments.items(), max_n_exp))
     elif n_exp < max_n_exp:
         print(f'INFO: Program is designed for {max_n_exp} plots, but only {n_exp} experiments were provided')
+
+    if args.name_as_wd:
+        experiments = {key: rf'$\lambda = {val}$' for key, val in experiments.items()}
 
     n_exp = min(n_exp, max_n_exp)
 
@@ -243,7 +246,8 @@ def _compare_experiments(parser: argparse.ArgumentParser, args: argparse.Namespa
         run_idx=run_idx,
         n_rows=n_rows, n_cols=n_cols,
         figsize=figsize,
-        plot_losses=plot_losses, plot_accuracy=plot_accuracy
+        plot_losses=plot_losses, plot_accuracy=plot_accuracy,
+        save=args.save, output=args.output,
     )
 
 

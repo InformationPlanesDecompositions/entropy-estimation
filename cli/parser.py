@@ -265,6 +265,17 @@ def build_parser() -> argparse.ArgumentParser:
         default=(3, 3),
         metavar=('n_rows', 'n_cols')
     )
+    q1_comparison_parser.add_argument(
+        '--name-as-wd',
+        type=bool,
+        default=True,
+        action=argparse.BooleanOptionalAction,
+        help="If true, the axes' titles will be labelled as \'$\\lambda = <exp>$\'",
+    )
+    q1_comparison_parser = _add_save_arguments(
+        q1_comparison_parser,
+        is_output_file=True,
+    )
 
     # ------------------------------------------------------------
     # Compare compression factors of experiments
