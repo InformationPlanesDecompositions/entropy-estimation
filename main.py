@@ -247,7 +247,7 @@ def _compare_experiments(parser: argparse.ArgumentParser, args: argparse.Namespa
         n_rows=n_rows, n_cols=n_cols,
         figsize=figsize,
         plot_losses=plot_losses, plot_accuracy=plot_accuracy,
-        save=args.save, output=args.output,
+        save=args.save, output=args.output, show_plots=args.show_plots,
     )
 
 
@@ -422,8 +422,8 @@ def _quantify_compression(parser: argparse.ArgumentParser, args: argparse.Namesp
 
     dataset_order: list[str] = compression_config.get('dataset_order', [])
 
-    if args.use_existing:
-        df_rho = pd.read_csv('output/tmp/rho_data.csv', decimal=',', sep=';', index_col=0)
+    if args.use_existing and (data_path := output_dir.joinpath('compression_factor_data.csv')).is_file():
+        df_rho = pd.read_csv(data_path, decimal=',', sep=';', index_col=0)
 
         evaluation.compression.plot_compression(
             df_rho,

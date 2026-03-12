@@ -276,6 +276,12 @@ def build_parser() -> argparse.ArgumentParser:
         q1_comparison_parser,
         is_output_file=True,
     )
+    q1_comparison_parser.add_argument(
+        '--show-plots',
+        type=bool,
+        default=True,
+        action=argparse.BooleanOptionalAction,
+    )
 
     # ------------------------------------------------------------
     # Compare compression factors of experiments

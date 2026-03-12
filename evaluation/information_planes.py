@@ -86,6 +86,7 @@ def compare_information_planes(
     plot_accuracy: bool,
     save: bool,
     output: pathlib.Path,
+    show_plots: bool,
 ):
     palette = 'cividis'
 
@@ -122,15 +123,16 @@ def compare_information_planes(
 
     if not (plot_losses or plot_accuracy) or df_metrics is None:
         if save:
-            os.makedirs(output)
+            os.makedirs(output.parent, exist_ok=True)
 
             plt.savefig(
-                output.with_stem(output.stem + '_ip').with_suffix('.pdf'),
+                output.with_stem(output.stem + '-ips').with_suffix('.pdf'),
                 dpi=300,
                 format='pdf',
             )
 
-        plt.show(block=True)
+        if show_plots:
+            plt.show(block=True)
 
         return
 
@@ -167,9 +169,10 @@ def compare_information_planes(
 
         if save:
             fig.savefig(
-                output.with_stem(f'{output.stem}_{plt_type}').with_suffix('.pdf'),
+                output.with_stem(f'{output.stem}-{plt_type}').with_suffix('.pdf'),
                 dpi=300,
                 format='pdf'
             )
     
-    plt.show(block=True)
+    if show_plots:
+        plt.show(block=True)

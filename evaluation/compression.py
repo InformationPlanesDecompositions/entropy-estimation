@@ -26,7 +26,7 @@ def plot_compression(
     cmap = plt.cm.ScalarMappable(cmap=palette)
     cmap.set_array([df_rho['WD'].min(), df_rho['WD'].max()])
 
-    fig, axes = plt.subplots(2, 2, figsize=(7.65, 7.2))
+    fig, axes = plt.subplots(2, 2, figsize=(10, 9.4))
     axes = np.ravel(axes)
 
     for idx, dataset in enumerate(dataset_order):
@@ -37,7 +37,9 @@ def plot_compression(
             df_dataset,
             x='#X-Axis', y='Rho',
             hue='WD', palette=palette,
-            s=3.5,
+            s=5,
+            edgecolor="auto",
+            linewidth=0.01,
             ax=ax,
         )
 
