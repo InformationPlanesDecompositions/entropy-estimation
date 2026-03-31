@@ -1,5 +1,7 @@
 from collections import defaultdict
+import os
 from os import path
+import pathlib
 
 import seaborn as sns
 import matplotlib.axes
@@ -154,6 +156,7 @@ def evaluate_plugin_estimate(
     fig_var.tight_layout()
 
     if save:
+        os.makedirs(output_dir, exist_ok=True)
         fig.savefig(f'{plot_prefix}_entropy.pdf')
         fig_var.savefig(f'{plot_prefix}_variance.pdf')
 
@@ -161,16 +164,31 @@ def evaluate_plugin_estimate(
 
 
 def evaluate_entropy_subadditivity(
-    activation_data: h5py.Group | h5py.Dataset,
-    output_dir: str,
-    file_postfix: str = '',
+    data_dir: pathlib.Path,
+    activation_file_name: str,
+    run_idx: int,
+    output_dir: pathlib.Path,
     save: bool = False,
 ):
+    activation_file_path = data_dir.joinpath(activation_file_name)
+
+    if not activation_file_path.is_file():
+        raise FileNotFoundError(f'No <{activation_file_name}> found in <{data_dir}>')
+    
+    activation_file = h5py.File(activation_file_path, 'r')
+
+    if activation_file.attrs['has_top_group']:
+        activation_data = activation_file.get(f'run_{run_idx}', None)
+    else:
+        activation_data = activation_file
+
+    if activation_data is None:
+        raise AttributeError(f'No run with index {run_idx} found in activation data')
+    
+    file_postfix = f'_{data_dir.name}_run_{run_idx}'
+
     data = defaultdict(list)
     rng = np.random.default_rng(2620)
-
-    if file_postfix != '' and not file_postfix.startswith('_'):
-        file_postfix = '_' + file_postfix
 
     layer_widths = dict()
 
@@ -234,6 +252,8 @@ def evaluate_entropy_subadditivity(
     fig.tight_layout(rect=(0, 0, 1, 0.925))
 
     if save:
+        os.makedirs(output_dir, exist_ok=True)
+
         plt.savefig(path.join(output_dir, f'Entropy_Subadditivity{file_postfix}.pdf'), dpi=300)
 
     plt.show(block=True)

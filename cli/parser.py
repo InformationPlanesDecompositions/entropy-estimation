@@ -197,12 +197,13 @@ def build_parser() -> argparse.ArgumentParser:
         help='Experiment run to use',
         default=0,
     )
-    ee_model_parser.add_argument(
-        '-s', '--save',
-        type=bool,
-        action=argparse.BooleanOptionalAction,
-        help='Save the generated plots',
-        default=True,
+    ee_model_parser = _add_save_arguments(
+        ee_model_parser,
+        is_output_file=False
+    )
+    ee_model_parser.set_defaults(
+        output='output/ee',
+        file_name='activations.h5',
     )
 
     # ============================================================
