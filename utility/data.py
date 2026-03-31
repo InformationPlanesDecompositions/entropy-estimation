@@ -1,4 +1,6 @@
 from collections import defaultdict
+
+import os
 from os import path
 
 import pathlib
@@ -31,3 +33,14 @@ def concat_experiment_files(
             dfs[f].append(df)
 
     return [pd.concat(df_list, ignore_index=True) for df_list in dfs.values()]
+
+
+def get_subfolders(root) -> set[str]:
+    paths = []
+
+    for dirpath, dirnames, _ in os.walk(root):
+        for dirname in dirnames:
+            subfolder_path = path.relpath(path.join(dirpath, dirname), root)
+            paths.append(subfolder_path)
+
+    return set(paths)

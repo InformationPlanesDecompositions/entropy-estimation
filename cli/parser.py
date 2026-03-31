@@ -142,6 +142,45 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = root_parser.add_subparsers(dest='command', required=True)
 
     # ============================================================
+    # Jobs
+    # ============================================================
+    job_parser = subparsers.add_parser('build', description='Build job scripts')
+    job_parser_group = job_parser.add_subparsers(dest='job', required=True)
+
+    job_ips_parser = job_parser_group.add_parser('ips', description='Build job script to create MI data and IPs for missing experiments')
+    job_ips_parser.add_argument(
+        '--dir-mi',
+        type=pathlib.Path,
+        help='Path to directory containing MI data subdirectories',
+        default='output/mi',
+    )
+    job_ips_parser.add_argument(
+        '--dir-experiments',
+        type=pathlib.Path,
+        help='Path to directory containing the experimental data',
+        required=True,
+    )
+    job_ips_parser.add_argument(
+        '--compute-mi',
+        type=bool,
+        action=argparse.BooleanOptionalAction,
+        default=False,
+    )
+    job_ips_parser.add_argument(
+        '--exclude-tmps',
+        type=bool,
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help='Exclude folders containing temporary indicating names, e.g. tmp, test, debug'
+    )
+    # NOTE: If more job builders are required, move this to a parent parser
+    job_ips_parser.add_argument(
+        '-o', '--output',
+        type=pathlib.Path,
+        default='job.sh',
+    )
+
+    # ============================================================
     # Entropy Evaluation
     # ============================================================
     eval_parser = subparsers.add_parser('evaluate', description='Evaluate the plug-in entropy estimator')

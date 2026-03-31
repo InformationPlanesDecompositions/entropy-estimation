@@ -162,3 +162,18 @@ def run_compression_rank_correlation(parser: argparse.ArgumentParser, args: argp
         )
     except Exception as e:
         parser.error(str(e))
+
+
+def run_missing_ips_job_builder(parser: argparse.ArgumentParser, args: argparse.Namespace):
+    from utility.jobs import build_missing_ip_jobs
+
+    try:
+        build_missing_ip_jobs(
+            dir_exp=args.dir_experiments,
+            dir_mi=args.dir_mi,
+            compute_mi=args.compute_mi,
+            exclude_tmps=args.exclude_tmps,
+            output=args.output,
+        )
+    except Exception as e:
+        parser.error(str(e))

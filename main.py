@@ -25,6 +25,8 @@ def _get_fn_from_args(args: argparse.Namespace):
             return cli.handlers.run_compression_comparison
         case 'q2', 'correlation':
             return cli.handlers.run_compression_rank_correlation
+        case 'build', 'ips':
+            return cli.handlers.run_missing_ips_job_builder
         
     return None
 
