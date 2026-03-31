@@ -43,7 +43,6 @@ def run_data_dim_regime_plotting(parser: argparse.ArgumentParser, args: argparse
             max_dim=args.max_dim,
             save=args.save,
             output_dir=args.output,
-            show_plt=args.show_plots
         )
     except Exception as e:
         parser.error(str(e))

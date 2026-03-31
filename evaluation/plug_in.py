@@ -264,7 +264,6 @@ def plot_approximate_data_to_dims_regime(
     max_dim: int,
     save: bool,
     output_dir: pathlib.Path,
-    show_plt: bool,
 ):
     d = np.arange(min_dim, max_dim + 1)
     k = np.pow(2, d)
@@ -290,5 +289,4 @@ def plot_approximate_data_to_dims_regime(
 
         plt.savefig(output_dir.joinpath('Data_Dimensionality_Regime.pdf'), dpi=300)
 
-    if show_plt:
-        plt.show(block=True)
+    plt.show(block=True)
