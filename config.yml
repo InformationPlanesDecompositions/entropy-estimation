@@ -1,0 +1,391 @@
+---
+comparison:
+  run_idx: 0
+  accuracy_plot: false
+  loss_plot: false
+  experiments:
+    # ====================
+    # SZT
+    # ====================
+
+    # --------------------
+    # SZT - Weight Decay
+    # --------------------
+
+    'szt/szt-raj-short':                    0  # '$\lambda = 0$'
+    # 'szt/szt-adamw-wd1e-1-lr1e-4-short':    0.1  # '$\lambda = 0.1$'
+    'szt/szt-wd-2e-1':                      0.2  # '$\lambda = 0.2$'
+    'szt/szt-wd-5e-1':                      0.5  # '$\lambda = 0.5$'
+    'szt/szt-wd-7e-1':                      0.7  # '$\lambda = 0.7$'
+    'szt/szt-adamw-wd1e-0-lr1e-4-short':    1  # '$\lambda = 1$'
+    # 'szt/szt-wd-1.1e-0':                    1.1  # '$\lambda = 2$'
+    # 'szt/szt-wd-1.2e-0':                    1.2  # '$\lambda = 2$'
+    # 'szt/szt-wd-1.5e-0':                    1.5  # '$\lambda = 2$'
+    # 'szt/szt-wd-1.7e-0':                    1.7  # '$\lambda = 2$'
+    'szt/szt-wd-2e-0':                      2  # '$\lambda = 2$'
+
+    # ====================
+    # MNIST
+    # ====================
+
+    # --------------------
+    # 50-10-10 - Weight Decay
+    # --------------------
+
+    # 'mnist/mnist-50-10-10':                   0.0  # '$\lambda = 0$'
+    # # 'mnist/mnist-wd-1e-1':                    0.1  # '$\lambda = 0.1$'
+    # 'mnist/mnist-wd-2e-1':                    0.2  # '$\lambda = 0.2$'
+    # 'mnist/mnist-wd-5e-1':                    0.5  # '$\lambda = 0.5$'
+    # 'mnist/mnist-wd-7e-1':                    0.7  # '$\lambda = 0.7$'
+    # 'mnist/mnist-wd-1e-0':                    1.0  # '$\lambda = 1$'
+    # # 'mnist/mnist-wd-1.1e-0':                  1.1  # '$\lambda = 1$'
+    # # 'mnist/mnist-wd-1.2e-0':                  1.2  # '$\lambda = 1$'
+    # # 'mnist/mnist-wd-1.5e-0':                  1.5  # '$\lambda = 1$'
+    # # 'mnist/mnist-wd-1.7e-0':                  1.7  # '$\lambda = 1$'
+    # 'mnist/mnist-wd-2e-0':                    2.0  # '$\lambda = 2$'
+
+    # --------------------
+    # Raj-like - Weight Decay
+    # --------------------
+
+    # 'mnist/mnist-1024-20x3-10':                 0
+    # # 'mnist/mnist-1024-20x3-10-wd-1e-1':         0.1
+    # 'mnist/mnist-1024-20x3-10-wd-2e-1':         0.2
+    # 'mnist/mnist-1024-20x3-10-wd-5e-1':         0.5
+    # 'mnist/mnist-1024-20x3-10-wd-7e-1':         0.7
+    # 'mnist/mnist-1024-20x3-10-wd-1e-0':         1
+    # # 'mnist/mnist-1024-20x3-10-wd-1.1e-0':       1.1
+    # # 'mnist/mnist-1024-20x3-10-wd-1.2e-0':       1.2
+    # # 'mnist/mnist-1024-20x3-10-wd-1.5e-0':       1.5
+    # # 'mnist/mnist-1024-20x3-10-wd-1.7e-0':       1.7
+    # 'mnist/mnist-1024-20x3-10-wd-2e-0':         2
+
+    # --------------------
+    # Bottleneck
+    # --------------------
+
+    # 'mnist/mnist-1024-20-10-10-10':            10
+    # 'mnist/mnist-1024-20-10-8-10':             8
+    # 'mnist/mnist-1024-20-10-6-10':             6
+    # 'mnist/mnist-1024-20-10-4-10':             4
+    # 'mnist/mnist-1024-20-10-2-10':             2
+
+    # --------------------
+    # Hourglass
+    # --------------------
+
+    # 'mnist/mnist-hg-1024-20-10-10':             10
+    # 'mnist/mnist-hg-1024-20-10-8':              8
+    # 'mnist/mnist-hg-1024-20-10-6':              6
+    # 'mnist/mnist-hg-1024-20-10-4':              4
+    # 'mnist/mnist-hg-1024-20-10-2':              2
+
+    # --------------------
+    # LeNet5 - Weight Decay
+    # --------------------
+
+    # 'mnist/mnist-lenet5':                       0.0
+    # 'mnist/mnist-lenet5-wd-1e-1':               0.1
+    # 'mnist/mnist-lenet5-wd-2e-1':               0.2
+    # 'mnist/mnist-lenet5-wd-5e-1':               0.5
+    # 'mnist/mnist-lenet5-wd-7e-1':               0.7
+    # 'mnist/mnist-lenet5-wd-1e-0':               1.0
+    # 'mnist/mnist-lenet5-wd-1.1e-0':             1.1
+    # 'mnist/mnist-lenet5-wd-1.2e-0':             1.2
+    # 'mnist/mnist-lenet5-wd-1.5e-0':             1.5
+    # 'mnist/mnist-lenet5-wd-1.7e-0':             1.7
+    # 'mnist/mnist-lenet5-wd-2e-0':               2.0  
+
+    # ====================
+    # FashionMNIST
+    # ====================
+
+    # --------------------
+    # 50-10-10 - Weight Decay
+    # --------------------
+
+    # 'fashion/fashion-50-10-10':           0.0
+    # # 'fashion/fashion-wd-1e-1':            0.1
+    # 'fashion/fashion-wd-2e-1':            0.2
+    # 'fashion/fashion-wd-5e-1':            0.5
+    # 'fashion/fashion-wd-7e-1':            0.7
+    # 'fashion/fashion-wd-1e-0':            1
+    # # 'fashion/fashion-wd-1.1e-0':          1.1
+    # # 'fashion/fashion-wd-1.2e-0':          1.2
+    # # 'fashion/fashion-wd-1.5e-0':          1.5
+    # # 'fashion/fashion-wd-1.7e-0':          1.7 
+    # 'fashion/fashion-wd-2e-0':            2
+
+    # --------------------
+    # Raj-like - Weight Decay
+    # --------------------
+
+    # 'fashion/fashion-1024-20x3-10':                   0
+    # # 'fashion/fashion-1024-20x3-10-wd-1e-1':           0.1
+    # 'fashion/fashion-1024-20x3-10-wd-2e-1':           0.2
+    # 'fashion/fashion-1024-20x3-10-wd-0.5e-0':         0.5
+    # 'fashion/fashion-1024-20x3-10-wd-7e-1':           0.7
+    # 'fashion/fashion-1024-20x3-10-wd-1e-0':           1.0
+    # # 'fashion/fashion-1024-20x3-10-wd-1.1e-0':         1.1
+    # # 'fashion/fashion-1024-20x3-10-wd-1.2e-0':         1.2
+    # # 'fashion/fashion-1024-20x3-10-wd-1.5e-0':         1.5
+    # # 'fashion/fashion-1024-20x3-10-wd-1.7e-0':         1.7  # Has a very weird outlier in one run
+    # 'fashion/fashion-1024-20x3-10-wd-2e-0':           2
+
+    # --------------------
+    # LeNet5 - Weight Decay
+    # --------------------
+
+    # 'fashion/fashion-lenet5':               0.0  # '$\lambda = 0.0$'
+    # # 'fashion/fashion-lenet5-wd-1e-1':       0.1  # '$\lambda = 0.1$'
+    # 'fashion/fashion-lenet5-wd-2e-1':       0.2  # '$\lambda = 0.2$'
+    # 'fashion/fashion-lenet5-wd-5e-1':       0.5  # '$\lambda = 0.5$'
+    # 'fashion/fashion-lenet5-wd-7e-1':       0.7  # '$\lambda = 0.7$'
+    # 'fashion/fashion-lenet5-wd-1e-0':       1  # '$\lambda = 1$'
+    # # 'fashion/fashion-lenet5-wd-1.1e-0':     1.1  # '$\lambda = 1.1$'
+    # # 'fashion/fashion-lenet5-wd-1.2e-0':     1.2  # '$\lambda = 1.2$'
+    # # 'fashion/fashion-lenet5-wd-1.5e-0':     1.5  # '$\lambda = 1.5$'
+    # # 'fashion/fashion-lenet5-wd-1.7e-0':     1.7  # '$\lambda = 1.7$'
+    # 'fashion/fashion-lenet5-wd-2e-0':       2  # '$\lambda = 2$'
+
+    # --------------------
+    # Bottleneck
+    # --------------------
+
+    # 'fashion/fashion-1024-20-10x3':            10
+    # 'fashion/fashion-1024-20-10-8-10':         8
+    # 'fashion/fashion-1024-20-10-6-10':         6
+    # 'fashion/fashion-1024-20-10-4-10':         4
+    # 'fashion/fashion-1024-20-10-2-10':         2
+
+    # --------------------
+    # Hourglass
+    # --------------------
+
+    # 'fashion/fashion-hg-1024-20-10-10':         10
+    # 'fashion/fashion-hg-1024-20-10-8':          8
+    # 'fashion/fashion-hg-1024-20-10-6':          6
+    # 'fashion/fashion-hg-1024-20-10-4':          4
+    # 'fashion/fashion-hg-1024-20-10-2':          2
+
+    # ====================
+    # Cifar10
+    # ====================
+
+    # --------------------
+    # LeNet5 - Weight Decay
+    # --------------------
+
+    # 'cifar10/c10-lenet5':                   0.0  # 'LeNet5'
+    # # 'cifar10/c10-lenet5-wd-1e-1':           0.1  # 'CIFAR10 WD $0.1$'
+    # 'cifar10/c10-lenet5-wd-2e-1':           0.2  # 'CIFAR10 WD $0.2$'
+    # 'cifar10/c10-lenet5-wd-5e-1':           0.5  # 'CIFAR10 WD $0.5$'
+    # 'cifar10/c10-lenet5-wd-7e-1':           0.7  # 'CIFAR10 WD $0.7$'
+    # 'cifar10/c10-lenet5-wd-1e-0':           1.0  # 'CIFAR10 WD $1.0$'
+    # # 'cifar10/c10-lenet5-wd-1.1e-0':         1.1  # 'CIFAR10 WD $1.1$'
+    # # 'cifar10/c10-lenet5-wd-1.2e-0':         1.2  # 'CIFAR10 WD $1.2$'
+    # # 'cifar10/c10-lenet5-wd-1.5e-0':         1.5  # 'CIFAR10 WD $1.5$'
+    # # 'cifar10/c10-lenet5-wd-1.7e-0':         1.7  # 'CIFAR10 WD $1.7$'
+    # 'cifar10/c10-lenet5-wd-2e-0':           2.0  # 'CIFAR10 WD $2.0$'
+
+    # --------------------
+    # LeNet5 - Architecture
+    # --------------------
+
+    # 'cifar10/c10-lenet5':                   '120-84-10'
+    # 'cifar10/c10-lenet5-120-50-10':         '120-50-10'
+    # 'cifar10/c10-lenet5-120-20-10':         '120-20-10'
+    # 'cifar10/c10-lenet5-70-50-10':         '70-50-10'
+    # 'cifar10/c10-lenet5-70-20-10':         '70-20-10'
+    # 'cifar10/c10-lenet5-50-50-10':         '50-50-10'
+    # 'cifar10/c10-lenet5-50-20-10':         '50-20-10'
+    # 'cifar10/c10-lenet5-50-10-10':         '50-10-10'
+
+    # --------------------
+    # Small LeNet5 - Weight decay
+    # --------------------
+
+    # 'cifar10/c10-lenet5-50-50-10':                    0.0
+    # # 'cifar10/c10-lenet5-50-50-10-wd-1e-1':            0.1
+    # 'cifar10/c10-lenet5-50-50-10-wd-2e-1':            0.2
+    # 'cifar10/c10-lenet5-50-50-10-wd-5e-1':            0.5
+    # 'cifar10/c10-lenet5-50-50-10-wd-7e-1':            0.7
+    # 'cifar10/c10-lenet5-50-50-10-wd-1e-0':            1.0
+    # # 'cifar10/c10-lenet5-50-50-10-wd-1.1e-0':          1.1
+    # # 'cifar10/c10-lenet5-50-50-10-wd-1.2e-0':          1.2
+    # # 'cifar10/c10-lenet5-50-50-10-wd-1.5e-0':          1.5
+    # # 'cifar10/c10-lenet5-50-50-10-wd-1.7e-0':          1.7
+    # 'cifar10/c10-lenet5-50-50-10-wd-2e-0':            2.0
+  experiment_groups:
+    'SZT':
+      'WD':
+        - 'szt/szt-raj-short'
+        - 'szt/szt-adamw-wd1e-1-lr1e-4-short'
+        - 'szt/szt-wd-2e-1'
+        - 'szt/szt-wd-5e-1'
+        - 'szt/szt-wd-7e-1'
+        - 'szt/szt-adamw-wd1e-0-lr1e-4-short'
+        - 'szt/szt-wd-1.1e-0'
+        - 'szt/szt-wd-1.2e-0'
+        - 'szt/szt-wd-1.5e-0'
+        - 'szt/szt-wd-1.7e-0'
+        - 'szt/szt-wd-2e-0'
+
+    'MNIST':
+      'Small BNN':
+        - 'mnist/mnist-50-10-10'
+        - 'mnist/mnist-wd-1e-1'
+        - 'mnist/mnist-wd-2e-1'
+        - 'mnist/mnist-wd-5e-1'
+        - 'mnist/mnist-wd-7e-1'
+        - 'mnist/mnist-wd-1e-0'
+        - 'mnist/mnist-wd-1.1e-0'
+        - 'mnist/mnist-wd-1.2e-0'
+        - 'mnist/mnist-wd-1.5e-0'
+        - 'mnist/mnist-wd-1.7e-0'
+        - 'mnist/mnist-wd-2e-0'
+
+      'Raj-like':
+        - 'mnist/mnist-1024-20x3-10'
+        - 'mnist/mnist-1024-20x3-10-wd-1e-1'
+        - 'mnist/mnist-1024-20x3-10-wd-2e-1'
+        - 'mnist/mnist-1024-20x3-10-wd-5e-1'
+        - 'mnist/mnist-1024-20x3-10-wd-7e-1'
+        - 'mnist/mnist-1024-20x3-10-wd-1e-0'
+        - 'mnist/mnist-1024-20x3-10-wd-1.1e-0'
+        - 'mnist/mnist-1024-20x3-10-wd-1.2e-0'
+        - 'mnist/mnist-1024-20x3-10-wd-1.5e-0'
+        - 'mnist/mnist-1024-20x3-10-wd-1.7e-0'
+        - 'mnist/mnist-1024-20x3-10-wd-2e-0'
+
+      'Bottleneck':
+        - 'mnist/mnist-1024-20-10-10-10'
+        - 'mnist/mnist-1024-20-10-8-10'
+        - 'mnist/mnist-1024-20-10-6-10'
+        - 'mnist/mnist-1024-20-10-4-10'
+        - 'mnist/mnist-1024-20-10-2-10'
+
+      'Hourglass':
+        - 'mnist/mnist-hg-1024-20-10-10'
+        - 'mnist/mnist-hg-1024-20-10-8'
+        - 'mnist/mnist-hg-1024-20-10-6'
+        - 'mnist/mnist-hg-1024-20-10-4'
+        - 'mnist/mnist-hg-1024-20-10-2'
+
+      'LeNet5':
+        - 'mnist/mnist-lenet5'
+        - 'mnist/mnist-lenet5-wd-1e-1'
+        - 'mnist/mnist-lenet5-wd-2e-1'
+        - 'mnist/mnist-lenet5-wd-5e-1'
+        - 'mnist/mnist-lenet5-wd-7e-1'
+        - 'mnist/mnist-lenet5-wd-1e-0'
+        - 'mnist/mnist-lenet5-wd-1.1e-0'
+        - 'mnist/mnist-lenet5-wd-1.2e-0'
+        - 'mnist/mnist-lenet5-wd-1.5e-0'
+        - 'mnist/mnist-lenet5-wd-1.7e-0'
+        - 'mnist/mnist-lenet5-wd-2e-0'
+
+    'FashionMNIST':
+      'Small BNN':
+        - 'fashion/fashion-50-10-10'
+        - 'fashion/fashion-wd-1e-1'
+        - 'fashion/fashion-wd-2e-1'
+        - 'fashion/fashion-wd-5e-1'
+        - 'fashion/fashion-wd-7e-1'
+        - 'fashion/fashion-wd-1e-0'
+        - 'fashion/fashion-wd-1.1e-0'
+        - 'fashion/fashion-wd-1.2e-0'
+        - 'fashion/fashion-wd-1.5e-0'
+        - 'fashion/fashion-wd-1.7e-0'
+        - 'fashion/fashion-wd-2e-0'
+
+      'Raj-like':
+        - 'fashion/fashion-1024-20x3-10'
+        - 'fashion/fashion-1024-20x3-10-wd-1e-1'
+        - 'fashion/fashion-1024-20x3-10-wd-2e-1'
+        - 'fashion/fashion-1024-20x3-10-wd-0.5e-0'
+        - 'fashion/fashion-1024-20x3-10-wd-7e-1'
+        - 'fashion/fashion-1024-20x3-10-wd-1e-0'
+        - 'fashion/fashion-1024-20x3-10-wd-1.1e-0'
+        - 'fashion/fashion-1024-20x3-10-wd-1.2e-0'
+        - 'fashion/fashion-1024-20x3-10-wd-1.5e-0'
+        - 'fashion/fashion-1024-20x3-10-wd-1.7e-0'
+        - 'fashion/fashion-1024-20x3-10-wd-2e-0'
+
+      'LeNet5':
+        - 'fashion/fashion-lenet5'
+        - 'fashion/fashion-lenet5-wd-1e-1'
+        - 'fashion/fashion-lenet5-wd-2e-1'
+        - 'fashion/fashion-lenet5-wd-5e-1'
+        - 'fashion/fashion-lenet5-wd-7e-1'
+        - 'fashion/fashion-lenet5-wd-1e-0'
+        - 'fashion/fashion-lenet5-wd-1.1e-0'
+        - 'fashion/fashion-lenet5-wd-1.2e-0'
+        - 'fashion/fashion-lenet5-wd-1.5e-0'
+        - 'fashion/fashion-lenet5-wd-1.7e-0'
+        - 'fashion/fashion-lenet5-wd-2e-0'
+
+      'Bottleneck':
+        - 'fashion/fashion-1024-20-10x3'
+        - 'fashion/fashion-1024-20-10-8-10'
+        - 'fashion/fashion-1024-20-10-6-10'
+        - 'fashion/fashion-1024-20-10-4-10'
+        - 'fashion/fashion-1024-20-10-2-10'
+
+      'Hourglass':
+        - 'fashion/fashion-hg-1024-20-10-10'
+        - 'fashion/fashion-hg-1024-20-10-8'
+        - 'fashion/fashion-hg-1024-20-10-6'
+        - 'fashion/fashion-hg-1024-20-10-4'
+        - 'fashion/fashion-hg-1024-20-10-2'
+    
+    'CIFAR-10':
+      'LeNet5':
+        - 'cifar10/c10-lenet5'
+        - 'cifar10/c10-lenet5-wd-1e-1'
+        - 'cifar10/c10-lenet5-wd-2e-1'
+        - 'cifar10/c10-lenet5-wd-5e-1'
+        - 'cifar10/c10-lenet5-wd-7e-1'
+        - 'cifar10/c10-lenet5-wd-1e-0'
+        - 'cifar10/c10-lenet5-wd-1.1e-0'
+        - 'cifar10/c10-lenet5-wd-1.2e-0'
+        - 'cifar10/c10-lenet5-wd-1.5e-0'
+        - 'cifar10/c10-lenet5-wd-1.7e-0'
+        - 'cifar10/c10-lenet5-wd-2e-0'
+      
+      'Variant LeNet5':
+        - 'cifar10/c10-lenet5'
+        - 'cifar10/c10-lenet5-120-50-10'
+        - 'cifar10/c10-lenet5-120-20-10'
+        - 'cifar10/c10-lenet5-70-50-10'
+        - 'cifar10/c10-lenet5-70-20-10'
+        - 'cifar10/c10-lenet5-50-50-10'
+        - 'cifar10/c10-lenet5-50-20-10'
+        - 'cifar10/c10-lenet5-50-10-10'
+      
+      'Small LeNet5':
+        - 'cifar10/c10-lenet5-50-50-10'
+        - 'cifar10/c10-lenet5-50-50-10-wd-1e-1'
+        - 'cifar10/c10-lenet5-50-50-10-wd-2e-1'
+        - 'cifar10/c10-lenet5-50-50-10-wd-5e-1'
+        - 'cifar10/c10-lenet5-50-50-10-wd-7e-1'
+        - 'cifar10/c10-lenet5-50-50-10-wd-1e-0'
+        - 'cifar10/c10-lenet5-50-50-10-wd-1.1e-0'
+        - 'cifar10/c10-lenet5-50-50-10-wd-1.2e-0'
+        - 'cifar10/c10-lenet5-50-50-10-wd-1.5e-0'
+        - 'cifar10/c10-lenet5-50-50-10-wd-1.7e-0'
+        - 'cifar10/c10-lenet5-50-50-10-wd-2e-0'
+
+  compression:
+    groups: ['WD', 'Small BNN', 'Raj-like', 'LeNet5', 'Small LeNet5']
+    dataset_order: ['SZT', 'MNIST', 'FashionMNIST', 'CIFAR-10']
+    include_layer_indices:
+      'WD': [-1, -2]
+      'Small BNN': [-1, -2]
+      'Raj-like': [-1]
+      'LeNet5': [-1]
+      'Small LeNet5': [-1]
+      'Variant LeNet5': [-1]
+      'Bottleneck': [-1]
+      'Hourglass': [-1]
+...
