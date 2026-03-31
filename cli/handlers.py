@@ -33,6 +33,21 @@ def run_practical_plug_in_evaluation(parser: argparse.ArgumentParser, args: argp
     except Exception as e:
         parser.error(str(e))
 
+    
+def run_data_dim_regime_plotting(parser: argparse.ArgumentParser, args: argparse.Namespace):
+    from evaluation.plug_in import plot_approximate_data_to_dims_regime
+
+    try:
+        plot_approximate_data_to_dims_regime(
+            min_dim=args.min_dim,
+            max_dim=args.max_dim,
+            save=args.save,
+            output_dir=args.output,
+            show_plt=args.show_plots
+        )
+    except Exception as e:
+        parser.error(str(e))
+
 
 def run_information_plane_generation(parser: argparse.ArgumentParser, args: argparse.Namespace):
     from evaluation.information_planes import generate_information_planes

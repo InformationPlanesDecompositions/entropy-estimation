@@ -257,3 +257,38 @@ def evaluate_entropy_subadditivity(
         plt.savefig(path.join(output_dir, f'Entropy_Subadditivity{file_postfix}.pdf'), dpi=300)
 
     plt.show(block=True)
+
+
+def plot_approximate_data_to_dims_regime(
+    min_dim: int,
+    max_dim: int,
+    save: bool,
+    output_dir: pathlib.Path,
+    show_plt: bool,
+):
+    d = np.arange(min_dim, max_dim + 1)
+    k = np.pow(2, d)
+
+    fig, ax = plt.subplots()
+
+    sns.lineplot(x=k, y=np.pow(k / np.log2(k), 2), ax=ax)
+
+    ax.set_xlabel(r'Alphabet size $k$')
+    ax.set_xscale('log', base=2)
+    ax.set_ylabel(r'Number of observations $N$')
+    ax.set_yscale('log', base=10)
+
+    ax.set_xlim((k[0], k[-1]))
+    ax.set_xticks(k)
+
+    ax.grid(True, axis='both', alpha=0.75)
+
+    fig.tight_layout()
+
+    if save:
+        os.makedirs(output_dir, exist_ok=True)
+
+        plt.savefig(output_dir.joinpath('Data_Dimensionality_Regime.pdf'), dpi=300)
+
+    if show_plt:
+        plt.show(block=True)

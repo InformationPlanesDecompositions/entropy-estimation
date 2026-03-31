@@ -206,6 +206,27 @@ def build_parser() -> argparse.ArgumentParser:
         file_name='activations.h5',
     )
 
+    # ------------------------------------------------------------
+    # Evaluation of the data-to-dimensionality regime
+    # ------------------------------------------------------------
+    ee_regime_parser = eval_parser_group.add_parser('regime', description='Plot the data-to-dimensionality regime as an approximate curve')
+    ee_regime_parser.add_argument(
+        '--min-dim',
+        type=int,
+        help='Minimum number of dimensions',
+        default=1,
+    )
+    ee_regime_parser.add_argument(
+        '--max-dim',
+        type=int,
+        help='Maximum number of dimensions',
+        default=20,
+    )
+    ee_regime_parser = _add_save_arguments(
+        ee_regime_parser,
+        is_output_file=False,
+    )
+
     # ============================================================
     # Mutual Information Estimation
     # ============================================================
