@@ -139,6 +139,14 @@ def _add_save_arguments(
 def build_parser() -> argparse.ArgumentParser:
     root_parser = argparse.ArgumentParser(prog='Information Plane Analysis')
 
+    debug_parent_parser = argparse.ArgumentParser(add_help=False)
+    debug_parent_parser.add_argument(
+        '--debug',
+        action=argparse.BooleanOptionalAction,
+        help='Debug some exception/error output',
+        default=False,
+    )
+
     subparsers = root_parser.add_subparsers(dest='command', required=True)
 
     # ============================================================
@@ -147,7 +155,11 @@ def build_parser() -> argparse.ArgumentParser:
     job_parser = subparsers.add_parser('build', description='Build job scripts')
     job_parser_group = job_parser.add_subparsers(dest='job', required=True)
 
-    job_ips_parser = job_parser_group.add_parser('ips', description='Build job script to create MI data and IPs for missing experiments')
+    job_ips_parser = job_parser_group.add_parser(
+        'ips',
+        description='Build job script to create MI data and IPs for missing experiments',
+        parents=[debug_parent_parser],
+    )
     job_ips_parser.add_argument(
         '--dir-mi',
         type=pathlib.Path,
@@ -189,7 +201,11 @@ def build_parser() -> argparse.ArgumentParser:
     # ------------------------------------------------------------
     # Toy Examples
     # ------------------------------------------------------------
-    ee_plugin_parser = eval_parser_group.add_parser('plug-in', description='Evaluate the entropy estimator on toy examples')
+    ee_plugin_parser = eval_parser_group.add_parser(
+        'plug-in',
+        description='Evaluate the entropy estimator on toy examples',
+        parents=[debug_parent_parser],
+    )
     ee_plugin_parser.add_argument(
         '-M', '--n-experiments',
         type=int,
@@ -223,7 +239,11 @@ def build_parser() -> argparse.ArgumentParser:
     # ------------------------------------------------------------
     # Entropy Evaluation on Trained Models
     # ------------------------------------------------------------
-    ee_model_parser = eval_parser_group.add_parser('model', description='Evaluate the entropy estimator on activations from a model')
+    ee_model_parser = eval_parser_group.add_parser(
+        'model',
+        description='Evaluate the entropy estimator on activations from a model',
+        parents=[debug_parent_parser],
+    )
     ee_model_parser.add_argument(
         '-d', '--data',
         type=str,
@@ -248,7 +268,11 @@ def build_parser() -> argparse.ArgumentParser:
     # ------------------------------------------------------------
     # Evaluation of the data-to-dimensionality regime
     # ------------------------------------------------------------
-    ee_regime_parser = eval_parser_group.add_parser('regime', description='Plot the data-to-dimensionality regime as an approximate curve')
+    ee_regime_parser = eval_parser_group.add_parser(
+        'regime',
+        description='Plot the data-to-dimensionality regime as an approximate curve',
+        parents=[debug_parent_parser],
+    )
     ee_regime_parser.add_argument(
         '--min-dim',
         type=int,
@@ -269,7 +293,7 @@ def build_parser() -> argparse.ArgumentParser:
     # ============================================================
     # Mutual Information Estimation
     # ============================================================
-    mi_parser = subparsers.add_parser('mi')
+    mi_parser = subparsers.add_parser('mi', parents=[debug_parent_parser])
     build_mi_parser(mi_parser)
 
     # ============================================================
@@ -289,6 +313,7 @@ def build_parser() -> argparse.ArgumentParser:
     q1_comparison_parser = q1_parser_group.add_parser(
         'ips',
         description='Compare the experiments on their information plane (optionally also in accuracy and loss)',
+        parents=[debug_parent_parser],
     )
     q1_comparison_parser = _add_config_arguments(
         q1_comparison_parser,
@@ -350,6 +375,7 @@ def build_parser() -> argparse.ArgumentParser:
     q1_compression_parser = q1_parser_group.add_parser(
         'compression',
         description='Compare the experiments on their computed compression factor',
+        parents=[debug_parent_parser],
     )
     q1_compression_parser = _add_config_arguments(
         q1_compression_parser,
@@ -391,6 +417,7 @@ def build_parser() -> argparse.ArgumentParser:
     q2_comparison_parser = q2_parser_group.add_parser(
         'compare',
         description='Compare the experiments on their compression in one layer w.r.t. the achieved validation accuracy',
+        parents=[debug_parent_parser],
     )
     q2_comparison_parser = _add_config_arguments(
         q2_comparison_parser,
@@ -426,6 +453,7 @@ def build_parser() -> argparse.ArgumentParser:
     q2_correlation_parser = q2_parser_group.add_parser(
         'correlation',
         description='Compute the Spearman rank correlation coefficients between the MI and validation accuracy',
+        parents=[debug_parent_parser],
     )
     q2_correlation_parser = _add_config_arguments(
         q2_correlation_parser,
