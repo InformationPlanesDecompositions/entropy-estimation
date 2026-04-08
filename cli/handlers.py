@@ -16,7 +16,7 @@ def run_synthetic_plug_in_evaluation(parser: argparse.ArgumentParser, args: argp
             output_dir=args.output,
         )
     except Exception as e:
-        parser.error(str(e))
+        _handle_exception(parser, args, e)
 
 
 def run_practical_plug_in_evaluation(parser: argparse.ArgumentParser, args: argparse.Namespace):
@@ -31,7 +31,7 @@ def run_practical_plug_in_evaluation(parser: argparse.ArgumentParser, args: argp
             output_dir=args.output,
         )
     except Exception as e:
-        parser.error(str(e))
+        _handle_exception(parser, args, e)
 
     
 def run_data_dim_regime_plotting(parser: argparse.ArgumentParser, args: argparse.Namespace):
@@ -45,7 +45,7 @@ def run_data_dim_regime_plotting(parser: argparse.ArgumentParser, args: argparse
             output_dir=args.output,
         )
     except Exception as e:
-        parser.error(str(e))
+        _handle_exception(parser, args, e)
 
 
 def run_information_plane_generation(parser: argparse.ArgumentParser, args: argparse.Namespace):
@@ -61,7 +61,7 @@ def run_information_plane_generation(parser: argparse.ArgumentParser, args: argp
             as_pdf=args.plot_as_pdf
         )
     except Exception as e:
-        parser.error(str(e))
+        _handle_exception(parser, args, e)
 
 
 def run_ip_comparison(parser: argparse.ArgumentParser, args: argparse.Namespace):
@@ -87,7 +87,7 @@ def run_ip_comparison(parser: argparse.ArgumentParser, args: argparse.Namespace)
             output=args.output
         )
     except Exception as e:
-        parser.error(str(e))
+        _handle_exception(parser, args, e)
 
 
 def run_compression_quantisation(parser: argparse.ArgumentParser, args: argparse.Namespace):
@@ -111,7 +111,7 @@ def run_compression_quantisation(parser: argparse.ArgumentParser, args: argparse
             show_plt=args.show_plots,
         )
     except Exception as e:
-        parser.error(str(e))
+        _handle_exception(parser, args, e)
 
 
 def run_compression_comparison(parser: argparse.ArgumentParser, args: argparse.Namespace):
@@ -139,7 +139,7 @@ def run_compression_comparison(parser: argparse.ArgumentParser, args: argparse.N
             show_plt=args.show_plots,
         )
     except Exception as e:
-        parser.error(str(e))
+        _handle_exception(parser, args, e)
 
 
 def run_compression_rank_correlation(parser: argparse.ArgumentParser, args: argparse.Namespace):
@@ -160,7 +160,7 @@ def run_compression_rank_correlation(parser: argparse.ArgumentParser, args: argp
             output_dir=args.output,
         )
     except Exception as e:
-        parser.error(str(e))
+        _handle_exception(parser, args, e)
 
 
 def run_missing_ips_job_builder(parser: argparse.ArgumentParser, args: argparse.Namespace):
@@ -175,4 +175,11 @@ def run_missing_ips_job_builder(parser: argparse.ArgumentParser, args: argparse.
             output=args.output,
         )
     except Exception as e:
+        _handle_exception(parser, args, e)
+
+
+def _handle_exception(parser: argparse.ArgumentParser, args: argparse.Namespace, e: Exception):
+    if args.debug:
+        raise e
+    else:
         parser.error(str(e))
