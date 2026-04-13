@@ -70,7 +70,7 @@ def run_ip_comparison(parser: argparse.ArgumentParser, args: argparse.Namespace)
     config = cli.configure.read_config(args.config)
     comparison_config = config.get('comparison', config)
 
-    experiments: dict[str, str] = config.get('experiments', {})
+    experiments: dict[str, str] = comparison_config.get('experiments', {})
 
     try:
         compare_information_planes(
