@@ -1,5 +1,10 @@
 # Entropy Estimation
 
+This project aim to compute the information-theoretic quantities of entropy and mutual information of trained binary
+neural networks to plot and analyse information planes and information-theoretic compression during learning. See the
+[BNN-Training Repository](https://github.com/InformationPlanesDecompositions/bnn-training) on GitHub for details on the
+training procedure and extraction of activations.
+
 Python version ~= 3.13
 
 ## How-to
