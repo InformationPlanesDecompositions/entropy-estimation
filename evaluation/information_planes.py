@@ -25,7 +25,7 @@ def generate_information_planes(
     save: bool,
     as_pdf: bool,
 ):
-    if data_dir.is_dir():
+    if not data_dir.is_dir():
         raise FileNotFoundError(f'Please provide an existing directory, did not find {data_dir}')
 
     dir_name = path.join(data_dir.parent.name, data_dir.name)
