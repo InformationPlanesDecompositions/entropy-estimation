@@ -1,14 +1,9 @@
 from collections import defaultdict
-from os import path
 
 import h5py
-import matplotlib.colors
-import matplotlib.pyplot as plt
-import matplotlib.axes
 import numpy as np
 import pandas as pd
 import scipy.special
-import seaborn as sns
 
 from tqdm import tqdm
 
