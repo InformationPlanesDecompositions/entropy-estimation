@@ -55,6 +55,7 @@ def run_information_plane_generation(parser: argparse.ArgumentParser, args: argp
         generate_information_planes(
             data_dir=args.data,
             run_idx=args.run,
+            ignore_output_layer=args.ignore_output,
             show_plots=args.show_plots,
             compute_mi=args.compute_mi,
             save=args.save,
@@ -76,6 +77,7 @@ def run_ip_comparison(parser: argparse.ArgumentParser, args: argparse.Namespace)
         compare_information_planes(
             experiments=experiments,
             run_idx=args.run,
+            ignore_output_layer=args.ignore_output,
             dir_mi=args.dir_mi,
             dir_exp=args.dir_experiments,
             show_plots=args.show_plots,

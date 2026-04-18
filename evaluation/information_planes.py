@@ -20,6 +20,7 @@ from utility.data import concat_experiment_files
 def generate_information_planes(
     data_dir: pathlib.Path,
     run_idx: int | None,
+    ignore_output_layer: bool,
     show_plots: bool,
     compute_mi: bool,
     save: bool,
@@ -93,6 +94,9 @@ def generate_information_planes(
     for run_idx in run_indices:
         df_run = df_data[df_data['Run'] == run_idx]
 
+        if ignore_output_layer:
+            df_run = df_run[df_run['Layer'].lt(df_run['Layer'].max())]
+
         plot_information_plane(
             df_run, show_plt=show_plots, block_plt=run_idx == last_run,
             save=save, output_dir=output_dir, postfix=f'_run_{run_idx}',
@@ -112,8 +116,12 @@ def plot_information_plane(
     ax: matplotlib.axes.Axes | None = None,
     cmap: plt.cm.ScalarMappable | None = None,
 ):
-    if ax is None:
+    is_standalone_plot = ax is None
+
+    if is_standalone_plot:
         fig, ax = plt.subplots(figsize=(6, 4.8))
+    else:
+        fig = plt.gcf()
 
     if cmap is None:
         min_epoch, max_epoch = df_data['Epoch'].min(), df_data['Epoch'].max()
@@ -152,7 +160,7 @@ def plot_information_plane(
         )
 
     if show_plt:
-        if ax is None:
+        if is_standalone_plot:
             fig.tight_layout()
 
         plt.show(block=block_plt)
@@ -164,14 +172,15 @@ def plot_information_plane(
 
 def compare_information_planes(
     experiments: dict[str, str],
-    run_idx: int,  # NOTE
+    run_idx: int,
+    ignore_output_layer: bool,
     dir_mi: pathlib.Path,
     dir_exp: pathlib.Path | None,
     show_plots: bool,
     plot_layout: tuple[int, int],
     name_as_wd: bool,
-    plot_losses: bool,  # NOTE
-    plot_accuracy: bool,  # NOTE
+    plot_losses: bool,
+    plot_accuracy: bool,
     save: bool,
     output: pathlib.Path,
 ):
@@ -230,6 +239,9 @@ def compare_information_planes(
     else:
         df_mis, *_ = concated_dfs
         df_metrics = None
+
+    if ignore_output_layer:
+        df_mis = df_mis[df_mis['Layer'].lt(df_mis['Layer'].max())]
 
     figsize = (5 * w_ratio, 5 * h_ratio)
 

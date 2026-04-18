@@ -329,6 +329,13 @@ def build_parser() -> argparse.ArgumentParser:
         required=False,
     )
     q1_comparison_parser.add_argument(
+        '--ignore-output',
+        type=bool,
+        action=argparse.BooleanOptionalAction,
+        help='Ignore the output layer when plotting MI',
+        default=False,
+    )
+    q1_comparison_parser.add_argument(
         '--accuracy-plot',
         type=bool,
         action=argparse.BooleanOptionalAction,
@@ -525,6 +532,13 @@ def build_mi_parser(
         type=bool,
         action=argparse.BooleanOptionalAction,
         help='Export the generated plot as .pdf file. Otherwise, .png is used',
+        default=False,
+    )
+    mi_parser.add_argument(
+        '--ignore-output',
+        type=bool,
+        action=argparse.BooleanOptionalAction,
+        help='Ignore the output layer when plotting MI',
         default=False,
     )
 
