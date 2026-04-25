@@ -541,6 +541,13 @@ def build_mi_parser(
         help='Ignore the output layer when plotting MI',
         default=False,
     )
+    mi_parser.add_argument(
+        '--colour-bar',
+        type=bool,
+        action=argparse.BooleanOptionalAction,
+        help='Show the colour bar representing the training epoch number',
+        default=True,
+    )
 
     return mi_parser
 

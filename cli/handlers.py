@@ -56,6 +56,7 @@ def run_information_plane_generation(parser: argparse.ArgumentParser, args: argp
             data_dir=args.data,
             run_idx=args.run,
             ignore_output_layer=args.ignore_output,
+            show_colour_bar=args.colour_bar,
             show_plots=args.show_plots,
             compute_mi=args.compute_mi,
             save=args.save,

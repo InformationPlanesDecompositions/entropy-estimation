@@ -21,6 +21,7 @@ def generate_information_planes(
     data_dir: pathlib.Path,
     run_idx: int | None,
     ignore_output_layer: bool,
+    show_colour_bar: bool,
     show_plots: bool,
     compute_mi: bool,
     save: bool,
@@ -101,6 +102,7 @@ def generate_information_planes(
             df_run, show_plt=show_plots, block_plt=run_idx == last_run,
             save=save, output_dir=output_dir, postfix=f'_run_{run_idx}',
             as_pdf=as_pdf,
+            show_colour_bar=show_colour_bar,
         )
 
 
@@ -115,11 +117,14 @@ def plot_information_plane(
     palette: str = 'cividis',
     ax: matplotlib.axes.Axes | None = None,
     cmap: plt.cm.ScalarMappable | None = None,
+    show_colour_bar: bool = True,
 ):
     is_standalone_plot = ax is None
 
     if is_standalone_plot:
-        fig, ax = plt.subplots(figsize=(6, 4.8))
+        figsize = (6, 4.8) if show_colour_bar else (4.8, 4.8)  # Cbar makes the plot square-like
+
+        fig, ax = plt.subplots(figsize=figsize)
     else:
         fig = plt.gcf()
 
@@ -149,8 +154,9 @@ def plot_information_plane(
     if (not show_plt and not save):
         return ax
         
-    cbar = ax.figure.colorbar(cmap, ax=sct_ax)
-    cbar.ax.set_xlabel('Epoch')
+    if show_colour_bar:
+        cbar = ax.figure.colorbar(cmap, ax=sct_ax)
+        cbar.ax.set_xlabel('Epoch')
 
     if save:
         plt.savefig(
