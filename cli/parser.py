@@ -153,7 +153,7 @@ def build_parser() -> argparse.ArgumentParser:
     # Jobs
     # ============================================================
     job_parser = subparsers.add_parser('build', description='Build job scripts')
-    job_parser_group = job_parser.add_subparsers(dest='job', required=True)
+    job_parser_group = job_parser.add_subparsers(dest='task', required=True)
 
     job_ips_parser = job_parser_group.add_parser(
         'ips',
@@ -187,6 +187,42 @@ def build_parser() -> argparse.ArgumentParser:
     )
     # NOTE: If more job builders are required, move this to a parent parser
     job_ips_parser.add_argument(
+        '-o', '--output',
+        type=pathlib.Path,
+        default='job.sh',
+    )
+
+    job_nc_parser = job_parser_group.add_parser(
+        'ncs',
+        description='Build job script to compute NC scores of missing experiments',
+        parents=[debug_parent_parser],
+    )
+    job_nc_parser = _add_config_arguments(
+        job_nc_parser,
+        include_experiment=True,
+        include_mi=False,
+        is_experiment_required=True
+    )
+    job_nc_parser.add_argument(
+        '--dir-nc',
+        type=pathlib.Path,
+        help='Path to the directory containing NC score subdirectories',
+        default='output/nc',
+    )
+    job_nc_parser.add_argument(
+        '-n', '--n-epochs',
+        type=int,
+        help='Last N epochs to be considered for computation',
+        default=50,
+    )
+    job_nc_parser.add_argument(
+        '--exclude-tmps',
+        type=bool,
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help='Exclude folders containing temporary indicating names, e.g. tmp, test, debug'
+    )
+    job_nc_parser.add_argument(
         '-o', '--output',
         type=pathlib.Path,
         default='job.sh',

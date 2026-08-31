@@ -39,6 +39,40 @@ def build_missing_ip_jobs(
     create_script(output, lines)
 
 
+def build_missing_ncs_jobs(
+    experiment_groups: dict[str, dict[str, list]],
+    dir_exp: pathlib.Path,
+    dir_nc: pathlib.Path,
+    n_epochs: int,
+    exclude_tmps: bool,
+    output: pathlib.Path,
+):
+    experiments = [os.path.relpath(experiment) for ds_data in experiment_groups.values()
+                   for group_data in ds_data.values()
+                   for experiment in group_data]
+
+    exp_folders = get_subfolders(dir_exp)
+    nc_folders = get_subfolders(dir_nc)
+
+    missing_folders = [m for m in list(exp_folders - nc_folders) if m in experiments]
+
+    lines = []
+
+    tmps = ['test', 'tmp', 'debug']
+
+    for missing in sorted(missing_folders):
+        if exclude_tmps and any(tmp in missing for tmp in tmps):
+            continue
+
+        p = dir_exp.joinpath(missing).as_posix()
+
+        line = f'python main.py nc compute --data {p} -n {n_epochs}\n'
+
+        lines.append(line)
+
+    create_script(output, lines)
+
+
 def create_script(
     script_file: pathlib.Path,
     lines: list[str],

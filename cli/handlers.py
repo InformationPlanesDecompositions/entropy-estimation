@@ -181,6 +181,27 @@ def run_missing_ips_job_builder(parser: argparse.ArgumentParser, args: argparse.
         _handle_exception(parser, args, e)
 
 
+def run_missing_nc_job_builder(parser: argparse.ArgumentParser, args: argparse.Namespace):
+    from utility.jobs import build_missing_ncs_jobs
+
+    config = cli.configure.read_config(args.config)
+    comparison_config: dict = config.get('comparison', config)
+
+    experiment_groups = comparison_config.get('experiment_groups', {})
+
+    try:
+        build_missing_ncs_jobs(
+            experiment_groups=experiment_groups,
+            dir_exp=args.dir_experiments,
+            dir_nc=args.dir_nc,
+            n_epochs=args.n_epochs,
+            exclude_tmps=args.exclude_tmps,
+            output=args.output,
+        )
+    except Exception as e:
+        _handle_exception(parser, args, e)
+
+
 def run_nc_score_computation(parser: argparse.ArgumentParser, args: argparse.Namespace):
     from evaluation.neural_collapse import compute_nc_from_file
 
