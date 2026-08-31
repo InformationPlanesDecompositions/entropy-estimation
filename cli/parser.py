@@ -484,6 +484,30 @@ def build_parser() -> argparse.ArgumentParser:
         is_output_file=False,
     )
 
+    # ============================================================
+    # Neural Collapse Scores
+    # ============================================================
+    nc_parsers = subparsers.add_parser('nc', description='Compute and evaluate neural collapse scores')
+    nc_parser_group = nc_parsers.add_subparsers(dest='task', required=True)
+
+    nc_score_parser = nc_parser_group.add_parser(
+        'compute',
+        description='Compute the Neural Collapse score as provided in ""Geometric and Information Compression of Representations in Deep Learning" (Adilova et al., 2026)"',
+        parents=[debug_parent_parser],
+    )
+    nc_score_parser.add_argument(
+        '-d', '--data',
+        type=pathlib.Path,
+        help='Path to the data directory',
+        required=True,
+    )
+    nc_score_parser.add_argument(
+        '-n', '--n-epochs',
+        type=int,
+        help='Last N epochs to be considered for computation',
+        default=50,
+    )
+
     return root_parser
 
 

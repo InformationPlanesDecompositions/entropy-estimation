@@ -181,6 +181,18 @@ def run_missing_ips_job_builder(parser: argparse.ArgumentParser, args: argparse.
         _handle_exception(parser, args, e)
 
 
+def run_nc_score_computation(parser: argparse.ArgumentParser, args: argparse.Namespace):
+    from evaluation.neural_collapse import compute_nc_from_file
+
+    try:
+        compute_nc_from_file(
+            data_dir=args.data,
+            n_epochs=args.n_epochs,
+        )
+    except Exception as e:
+        _handle_exception(parser, args, e)
+
+
 def _handle_exception(parser: argparse.ArgumentParser, args: argparse.Namespace, e: Exception):
     if args.debug:
         raise e
