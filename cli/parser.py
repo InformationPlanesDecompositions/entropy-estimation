@@ -544,6 +544,41 @@ def build_parser() -> argparse.ArgumentParser:
         default=50,
     )
 
+    nc_correlation_parser = nc_parser_group.add_parser(
+        'correlation',
+        description='Compute the Spearman rank correlation coefficients between NC score and validation accuracy, and MI',
+        parents=[debug_parent_parser],
+    )
+    nc_correlation_parser = _add_config_arguments(
+        nc_correlation_parser,
+        include_mi=True,
+        include_experiment=True,
+        is_experiment_required=True,
+    )
+    nc_correlation_parser.add_argument(
+        '--dir-nc',
+        type=pathlib.Path,
+        help='Path to the directory containing NC score subdirectories',
+        default='output/nc',
+    )
+    nc_correlation_parser.add_argument(
+        '-n', '--n-epochs',
+        type=int,
+        default=50,
+        help='How many of the last epochs should be considered for aggregation',
+    )
+    nc_correlation_parser.add_argument(
+        '--to-latex',
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help='Additionally output the correlation data as table body',
+        type=bool,
+    )
+    nc_correlation_parser = _add_save_arguments(
+        nc_correlation_parser,
+        is_output_file=False,
+    )
+
     return root_parser
 
 

@@ -31,6 +31,8 @@ def _get_fn_from_args(args: argparse.Namespace):
             return cli.handlers.run_missing_nc_job_builder
         case 'nc', 'compute':
             return cli.handlers.run_nc_score_computation
+        case 'nc', 'correlation':
+            return cli.handlers.run_nc_rank_correlation
         
     return None
 

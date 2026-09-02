@@ -4,12 +4,12 @@ import os
 from os import path
 
 import h5py
-
 import numpy as np
-
 import pandas as pd
-
+import scipy.stats
 from tqdm import tqdm
+
+from utility.data import concat_experiment_files
 
 
 # Taken from "Geometric and Information Compression of Representations in Deep Learning" (Adilova et al., 2026)
@@ -121,3 +121,98 @@ def compute_nc_from_file(data_dir: pathlib.Path, n_epochs: int):
     df_data.to_csv(f'{output_dir}/scores.csv', decimal=',', sep=';')
 
     return df_data
+
+
+def compute_nc_rank_correlations(
+    experiment_groups: dict[str, dict[str, list[str]]],
+    dir_nc: pathlib.Path,
+    dir_exp: pathlib.Path,
+    dir_mi: pathlib.Path,
+    n_epochs: int,
+    to_latex: bool,
+    output_dir: pathlib.Path,
+):
+    if not dir_exp.is_dir():
+        raise FileNotFoundError(f'Invalid data directory for experiments provided, could not find {dir_exp}')
+
+    if not dir_mi.is_dir():
+        raise FileNotFoundError(f'Invalid data directory for MI estimates provided, could not find {dir_mi}')
+    
+    experiments = {exp: exp for groups in experiment_groups.values() for group in groups.values() for exp in group}
+
+    df_groupings = pd.DataFrame(
+        [
+            (ds_name, grp_name, exp) for ds_name, ds in experiment_groups.items()
+            for grp_name, grp in ds.items()
+            for exp in grp
+        ],
+        columns=['Dataset', 'Group', 'Experiment'],
+    )
+
+    df_metrics, df_mis, df_ncs, *_ = concat_experiment_files(
+        experiments,
+        files=['metrics.csv', 'mi_data.csv', 'scores.csv'],
+        dirs=[dir_exp, dir_mi, dir_nc],
+        is_key_path=True
+    )
+
+    df = pd.merge(df_ncs, df_mis, on=['Experiment', 'Run', 'Epoch', 'Layer'], how='left')
+    df = pd.merge(df, df_metrics, on=['Experiment', 'Run', 'Epoch'], how='left')
+
+    max_layer_indices = df_mis.groupby(by='Experiment')['Layer'].max()
+    df['Layer'] = df.apply(lambda row: row['Layer'] - max_layer_indices[row['Experiment']], axis=1).astype(int)
+    df = df[df['Epoch'].ge(df['Epoch'].max() - n_epochs + 1)]
+    df.drop(index=df[df['Layer'] == 0].index, inplace=True)
+
+    df = df_groupings.merge(df, on='Experiment', how='right')
+    
+    df_grouped = df.groupby(by=['Dataset', 'Group', 'Experiment', 'Run', 'Layer'])
+    df_agg = df_grouped.aggregate({
+        'NC': ['mean'],
+        'MI_x': ['mean'],
+        'Val. Acc': ['mean']
+    }).reset_index()
+
+    data: defaultdict[str, list] = defaultdict(list)
+
+    for (dataset, group, layer_idx), df_group in df_agg.groupby(by=['Dataset', 'Group', 'Layer']):
+        data['Dataset'].append(dataset)
+        data['Group'].append(group)
+        data['Layer'].append(layer_idx)
+
+        r, p = scipy.stats.spearmanr(df_group[[('NC', 'mean'), ('Val. Acc', 'mean')]])
+
+        data['R NC-Acc'].append(r)
+        data['p NC-Acc'].append(p)
+
+        r, p = scipy.stats.spearmanr(df_group[[('NC', 'mean'), ('MI_x', 'mean')]])
+        
+        data['R NC-MI'].append(r)
+        data['p NC-MI'].append(p)
+
+    
+    df_result = pd.DataFrame(data)
+    df_result.to_csv(path.join(output_dir, 'rank_corr_nc_data.csv'), sep=';', decimal=',')
+
+    if not to_latex:
+        return
+    
+    lines = []
+
+    lines.append('Dataset & Experiment Group & Layer & $r_s$ NC-Acc & $p$ NC-Acc & $r_s$ NC-MI & $p$ NC-MI \\\\\n')
+    lines.append('\\midrule\n')
+
+    last_ds = ''
+
+    for (_, ds, grp, layer_idx, r_acc, p_acc, r_mi, p_mi) in df_result.itertuples():
+        if last_ds != '' and ds != last_ds:
+            lines.append('\\midrule\n')
+        
+        last_ds = ds
+
+        lines.append(
+            f'{ds} & {grp} & {layer_idx} & $\\numprint{{{r_acc}}}$ & ${f"\\numprint{{{p_acc}}}" if p_acc >= 0.0005 else "< 0.001"}$ & $\\numprint{{{r_mi}}}$ & ${f"\\numprint{{{p_mi}}}" if p_mi >= 0.0005 else "< 0.001"}$ \\\\\n'
+        )
+
+    with open(path.join(output_dir, 'rank_corr_nc_table.tex'), 'w') as f:
+        f.writelines(lines)

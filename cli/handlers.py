@@ -214,6 +214,28 @@ def run_nc_score_computation(parser: argparse.ArgumentParser, args: argparse.Nam
         _handle_exception(parser, args, e)
 
 
+def run_nc_rank_correlation(parser: argparse.ArgumentParser, args: argparse.Namespace):
+    from evaluation.neural_collapse import compute_nc_rank_correlations
+
+    config = cli.configure.read_config(args.config)
+    comparison_config: dict = config.get('comparison', config)
+
+    experiment_groups = comparison_config.get('experiment_groups', {})
+
+    try:
+        compute_nc_rank_correlations(
+            experiment_groups=experiment_groups,
+            dir_nc=args.dir_nc,
+            dir_exp=args.dir_experiments,
+            dir_mi=args.dir_mi,
+            n_epochs=args.n_epochs,
+            to_latex=args.to_latex,
+            output_dir=args.output,
+        )
+    except Exception as e:
+        _handle_exception(parser, args, e)
+
+
 def _handle_exception(parser: argparse.ArgumentParser, args: argparse.Namespace, e: Exception):
     if args.debug:
         raise e
